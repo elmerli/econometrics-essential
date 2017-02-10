@@ -43,10 +43,10 @@ library(sandwich)
 # For the estimation of the residual variance, we can see from the value of var_res, 
 # which gives us the result: 15.42452
 
-# For significance test, we can read from the summary of our gmm estimator - gmm1; 
-# from the table we can see from the result of the t-test statistic that the coefficients
-# for P, wpg and intercept are all very small to make them all statistically significant 
-# at 1% level. For Pl, the test result shows the significance at 10% level. 
+#For significance test, we can read from the summary of our gmm estimator - gmm1; 
+#from the table we can see from the result of the t-test statistic that the coefficients
+#for P, wpg and intercept are all very small to make them all statistically significant 
+#at 1% level. For Pl, the test result shows the significance at 10% level. 
 
 # The J-test statistics gives us the result of whether the moment conditions hold; 
 # It test the null hypothesis that E(g)=0, based on the scoring funtion together with optimal weighting
