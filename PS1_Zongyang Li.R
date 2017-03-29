@@ -18,7 +18,7 @@ library(sandwich)
 ##################################################
 
 ## Read data
-	klein_data<-read_excel("/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS1/klein_data.xls", sheet = "klein_data")
+	klein_data<-read_excel("/Users/zongyangli/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS1/klein_data.xls", sheet = "klein_data")
 
 ## Set new variables
 	klein_data <- klein_data %>% mutate(wpg = Wp*G, Pl = lag(P,1)) 
@@ -59,7 +59,7 @@ library(sandwich)
 ##################################################
 
 ## Read data
-	data1<-read_excel("/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS1/FormattedData.xlsx", sheet = "Sheet3")
+	data1<-read_excel("/Users/zongyangli/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS1/FormattedData.xlsx", sheet = "Sheet3")
 	data1 <- data1[,c(1:13)]
 
 ## Use gcnq gcsq to infer for the consumption -> sum them and then devide to get the C_t+1/C_t in the model

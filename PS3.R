@@ -2,34 +2,36 @@
 
 rm(list=ls())
 cat("/014")
-setwd("/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS3")
+setwd("/Users/zongyangli/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS3")
 set.seed(500) # 
 
 library(MASS)
-data=Boston
+data <- Boston
 
 # first check no datapoint is missing
 
-apply(data, 2, function() sum(is.na(x)))
+apply(data,2,function(x) sum(is.na(x)))
 
-# randomly split the data into a train and test, fit linear regresssion and test it on the test set
+# We proceed by randomly splitting the data into a train and a test set, then we fit a linear regression model 
+# and test it on the test set. Note that I am using the gml() function instead of the lm() this will become 
+# useful later when cross validating the linear model.
 
-index = sample(1:nrow(data),round(0.75*nrow(data)))
-train = data[index,]
-test = data[-index,]
-
+index <- sample(1:nrow(data),round(0.75*nrow(data))) # The sample(x,size) function simply outputs a vector of the specified size of randomly selected samples from the vector x. By default the sampling is without replacement: index is essentially a random vector of indeces.
+train <- data[index,]
+test <- data[-index,]
 # we use gls
-
-lm.fit = glm(medv~.,data=train) # period model is everthing
+lm.fit <- glm(medv~.,data=train) # period model is everthing
 summary(lm.fit)
-pr.lm = predict(lm.fit,test)
-MSE.lm = sum((pr.lm-test$medv)^2)/nrow(test)
+pr.lm <- predict(lm.fit,test)
+MSE.lm <- sum((pr.lm - test$medv)^2)/nrow(test) # since we are dealing wit reg problem, we are going to the MSE as a measure of how much our prediction are far away
 
-#### coursera machine learning
 
-# since we are dealing wit reg problem, we are going to the MSE as a measure of how much our prediction are far away
+##################################################
+# Prepare Data
+##################################################
 
-# Data preparation
+# Normalize your data before training a neural network
+	# here use min-max method and scale the data in the interval [0,1]. Usually scaling in the intervals [0,1] or [-1,1] tends to give better results.
 maxs=apply(data,2,max)
 mins=apply(data,2,min)
 scaled = as.data.frame(scale(data,center = mins, scale= maxs-mins))
@@ -37,15 +39,22 @@ scaled = as.data.frame(scale(data,center = mins, scale= maxs-mins))
 train_ = scaled[index,]
 test_ = scaled[-index,]
 
-# usually one hider layer is enought, as far as the num of neurons is concerend, useually 2/3 of the input size
-# 13;5;3;1
+##################################################
+# Parameters
+##################################################
+
+# Layer: usually one hider layer is enought, 
+# Num of neurons: useually 2/3 of the input size
+# Here use: 13:5:3:1, output with one year becasue of regression
 
 install.packages("neuralnet")
 library(neuralnet)
 
 n=names(train_)
-f=as.formula(paste("medv ~"), paste(n[!n %in% "medv"], collapse = " + "))
-nn=neuralnet(f,data=train_,hidden=c(5,3),linear.output=T)
+f=as.formula(paste("medv ~"), paste(n[!n %in% "medv"], collapse = " + ")) 
+	# The formula y~. is not accepted in the neuralnet() function. First write the formula and then pass it as an argument in the fitting function.
+
+nn=neuralnet(f, data=train_, hidden=c(5,3), linear.output=T)
 plot(nn)
 
 pr.nn = comute(nn,test_[,1:13])
