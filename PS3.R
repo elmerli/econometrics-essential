@@ -1,4 +1,5 @@
 
+# https://www.r-bloggers.com/fitting-a-neural-network-in-r-neuralnet-package/
 
 rm(list=ls())
 cat("/014")
@@ -57,9 +58,21 @@ f=as.formula(paste("medv ~"), paste(n[!n %in% "medv"], collapse = " + "))
 nn=neuralnet(f, data=train_, hidden=c(5,3), linear.output=T)
 plot(nn)
 
-pr.nn = comute(nn,test_[,1:13])
-pr.nn_ = pr.nn$net.result*(max(data$medv) - min(data$medv)) + min(data$medv)
-test.r = (test_$medv)*(max(data$medv)- min(data$medv)) + min(data$medv)
+
+
+##################################################
+# PPredicting medv using the neural network
+##################################################
+
+pr.nn <- compute(nn,test_[,1:13])
+
+pr.nn_ <- pr.nn$net.result*(max(data$medv)-min(data$medv))+min(data$medv)
+test.r <- (test_$medv)*(max(data$medv)-min(data$medv))+min(data$medv)
+
+MSE.nn <- sum((test.r - pr.nn_)^2)/nrow(test_)
+we then compare the two MSEs
+
+print(paste(MSE.lm,MSE.nn))
 
 
 par(mfrow=c(1,2))
