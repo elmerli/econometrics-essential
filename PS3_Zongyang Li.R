@@ -118,30 +118,36 @@ weo.probitmfx_2
 crime <- read.table("crime.txt")
 
 crime_1 <- crime %>%
-  mutate(district = V1, year = V2, crime = V3, clrprc1 = V4, clrprc2 = V5, d78 = V6, avgclr = V7, lcrime = V8, clcrime = V9, cavgclr = V10, cclrprc1 = V11, cclrprc2 = V12) %>%
-  select(district,year,crime,clrprc1,clrprc2,d78,avgclr,lcrime,clcrime,cavgclr,cclrprc1,cclrprc2) %>%
-  mutate(crime_mean = mean(crime, na.rm = T), crime_compare = ifelse(crime > crime_mean, 1, 0))
+  dplyr::mutate(district = V1, year = V2, crime = V3, clrprc1 = V4, clrprc2 = V5, d78 = V6, avgclr = V7, lcrime = V8, clcrime = V9, cavgclr = V10, cclrprc1 = V11, cclrprc2 = V12) %>%
+  dplyr::select(district,year,crime,clrprc1,clrprc2,d78,avgclr,lcrime,clcrime,cavgclr,cclrprc1,cclrprc2) %>%
+  dplyr::mutate(crime_mean = mean(crime, na.rm = T), crime_compare = ifelse(crime > crime_mean, 1, 0))
+
+train = subset(crime_1, d78<1)
+test = subset(crime_1, d78>0)
 
 #####################
 ## Problem 3.1 - LDA
 #####################
 
 library(MASS)
-crime.lda <- lda(crime_compare ~ d78+clrprc1+clrprc2, data=crime_1, na.action="na.omit", CV=TRUE)
-	# cmt: The code above performs an LDA. CV=TRUE generates leave-one-out cross validation.
-crime.lda # show result
+crime.lda <- lda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit")
+pr.lda <- predict(crime.lda,newdata = test) 
 ## Show result as a table
-table(crime_1$crime_compare, crime.lda$class , dnn = c('Actual','Predicted LDA')) 
+table(train$crime_compare, pr.lda$class, dnn = c('Actual','Predicted LDA')) 
 
 #####################
 ## Problem 3.2 - QDA
 #####################
 
-crime.qda <- qda(crime_compare ~ d78+clrprc1+clrprc2, data=crime_1, na.action="na.omit", CV=TRUE)
+crime.qda <- qda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit")
 
 ## Compare - Method 1: the build in cross-validation function in LDA and QDA
-table(crime_1$crime_compare, crime.lda$class, dnn = c('Actual Group','Predicted LDA'))
-table(crime_1$crime_compare, crime.qda$class, dnn = c('Actual Group','Predicted QDA'))
+
+crime.lda_cv <- lda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit",CV = TRUE)
+crime.qda_cv <- qda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit",CV = TRUE)
+	# cmt: CV=TRUE generates leave-one-out cross validation.
+table(train$crime_compare, crime.lda_cv$class, dnn = c('Actual Group','Predicted LDA'))
+table(train$crime_compare, crime.qda_cv$class, dnn = c('Actual Group','Predicted QDA'))
 
 ## Comment: 
 	# from the ouput table we can see very obviously that QDA did a better job at predicting since there are
@@ -150,15 +156,16 @@ table(crime_1$crime_compare, crime.qda$class, dnn = c('Actual Group','Predicted 
 ## Compare - Method 2: manul cross validation and compare MSE
 
 # build train and test datasets
-index <- sample(1:nrow(crime_1),round(0.75*nrow(crime_1))) 
-train <- crime_1[index,]
-test <- crime_1[-index,]
+	# index <- sample(1:nrow(crime_1),round(0.75*nrow(crime_1))) 
+	# train <- crime_1[index,]
+	# test <- crime_1[-index,]
 # fit model
-crime.lda_2 <- lda(crime_compare ~ clrprc1+clrprc2+d78, data=train, na.action="na.omit")
-crime.qda_2 <- qda(crime_compare ~ clrprc1+clrprc2+d78, data=train, na.action="na.omit")
+	# crime.lda_2 <- lda(crime_compare ~ clrprc1+clrprc2+d78, data=train, na.action="na.omit")
+	# crime.qda_2 <- qda(crime_compare ~ clrprc1+clrprc2+d78, data=train, na.action="na.omit")
 # predict on test dataset
-pr.lda <- predict(crime.lda_2,test[,4:6])
-pr.qda <- predict(crime.qda_2,test[,4:6])
+		# pr.lda <- predict(crime.lda_2,test[,4:6])
+		# pr.qda <- predict(crime.qda_2,test[,4:6])
+	pr.qda <- predict(crime.qda,newdata = test)
 	# turn result to integer
 	pr.lda_class <- as.integer(pr.lda$class)
 	pr.qda_class <- as.integer(pr.qda$class)
@@ -169,7 +176,7 @@ MSE.qda <- sum((test$crime_compare - pr.qda_class)^2)/nrow(test)
 print(paste(MSE.lda,MSE.qda))
 
 ## Comment: 
-	# From the result of MSE - 1.54 for LDA and 1.46 for QDA we may conclude that QDA performs better
+	# From the result of MSE - 1.21 for LDA and 1.11 for QDA we may conclude that QDA performs better
 
 
 #####################
@@ -180,28 +187,34 @@ set.seed(100)
 library(class)
 
 # build train and test datasets
-train <- crime_1[index,c(4:6,14)]
-test <- crime_1[-index,c(4:6,14)]
+knntrain <- train[,c(4:5,14)]
+knntest <- test[,c(4:5,14)]
 # fit model, predict and see MSE
-pr.knn <- knn(train,test,train$crime_compare, k = 1)
-table(pr.knn,test$crime_compare)
+pr.knn <- knn(knntrain,knntest,knntrain$crime_compare, k = 1)
+table(pr.knn,knntest$crime_compare)
 pr.knn_class <- as.integer(pr.knn)
-MSE.knn_0 <- sum((test$crime_compare - pr.knn_class)^2)/nrow(test)
+MSE.knn_0 <- sum((knntest$crime_compare - pr.knn_class)^2)/nrow(knntest)
 MSE.knn_0
 
 # try to find the minimum MSE
-MSE.knn <- rep(0, 10)
-k <- 1:10
+MSE.knn <- rep(0, 20)
+k <- 1:20
 for(x in k){
-	pr.knn <- knn(train,test,train$crime_compare, k = x)
+	pr.knn <- knn(knntrain,knntest,knntrain$crime_compare, k = x)
 	pr.knn_class <- as.integer(pr.knn)
-	MSE.knn[x] <- sum((test$crime_compare - pr.knn_class)^2)/nrow(test)
+	MSE.knn[x] <- sum((knntest$crime_compare - pr.knn_class)^2)/nrow(knntest)
 }
 plot(k, MSE.knn, type = 'b')
-## Comment: From the plotted graph we can see that the MSE is still minimized at k=1, so we choose k=1 in this case
+## Comment: From the plotted graph we can see that the MSE is minimized at k=9, so we choose k=9 in this case
 
-print(paste(MSE.lda,MSE.qda,MSE.knn_0))
-## Comment: we can see that the MSE for kNN with k set at 1 is 1.27, which is much less that of LDA and QDA
+pr.knn <- knn(knntrain,knntest,knntrain$crime_compare, k = 9)
+table(pr.knn,knntest$crime_compare)
+pr.knn_class <- as.integer(pr.knn)
+MSE.knn <- sum((knntest$crime_compare - pr.knn_class)^2)/nrow(knntest)
+MSE.knn
+
+print(paste(MSE.lda,MSE.qda,MSE.knn))
+## Comment: we can see that the MSE for kNN with k set at 1 is 1.19, which less than LDA but more than QDA
 
 
 ##################################################
@@ -215,23 +228,56 @@ smoke_1 <- smoke %>%
 	dplyr::select(faminc, cigtax, cigprice, bwght, fatheduc, motheduc, parity, male, white, cigs, lbwght, bwghtlbs, packs, lfaminc) %>%
 	dplyr::mutate(smokes = ifelse(cigs>0,1,0), motheduc = as.integer(motheduc))
 
-smoke_16 <- smoke_1 %>% mutate(lfaminc = mean(lfaminc, na.rm = T), motheduc = 16)
-smoke_12 <- smoke_1 %>% mutate(lfaminc = mean(lfaminc, na.rm = T), motheduc = 12)
-
-  
 #####################
 ## Problem 5.1
 #####################
+
+# first run regression
 smoke_preg.probit <- glm(smokes ~ motheduc + lfaminc, family = binomial(link = "probit"), data = smoke_1)
-
-p_edu16 <- smoke_preg.probit$coeff[1] + smoke_preg.probit$coeff[3]*mean(smoke_1$lfaminc) + smoke_preg.probit$coeff[2]*16
-p_edu12 <- smoke_preg.probit$coeff[1] + smoke_preg.probit$coeff[3]*mean(smoke_1$lfaminc) + smoke_preg.probit$coeff[2]*12
-
+# create two new datasets with faminc at the mean and different education years
+smoke_16 <- smoke_1 %>% mutate(lfaminc = mean(lfaminc, na.rm = T), motheduc = 16)
+smoke_12 <- smoke_1 %>% mutate(lfaminc = mean(lfaminc, na.rm = T), motheduc = 12)
+# predict the dependent
 p_edu16 <- predict(smoke_preg.probit,smoke_16)
 p_edu12 <- predict(smoke_preg.probit,smoke_16)
 
-mean(p_edu16 - p_edu12)
+mean(p_edu16 - p_edu12) # result: -0.05189609
 
+## Comment: the estimated difference in possiblity of smoking is 5.1 percentage points less for a woman 
+	# with 16 years of education and 12 years
 
+#####################
+## Problem 5.2
+#####################
 
+summary(smoke_preg.probit)
+
+## Comment: 
+	# faminc is not very likely to be exogeneous in this equation since there are factors that impact both income level 
+	# and smoking, such as previous health habits(eating habits etc.) which will influcence both one's income and possibility to smoke
+
+	# motheredu isn't likely to be exogeneous since education is so correlated to income and there is likely to be other
+	# unobservables that might influence both motheredu and smoke
+
+#####################
+## Problem 5.3
+#####################
+
+install.packages('systemfit')
+
+form1 <- smokes ~ motheduc
+form2 <- smokes ~ motheduc + lfaminc
+inst <- ~ male + white
+system <- list(form1, form2)
+
+## perform the estimations
+fit2sls <- systemfit( system, "2SLS", inst = inst, data = smoke_1 )
+fit3sls <- systemfit( system, "3SLS", inst = inst, data = smoke_1 )
+
+## perform the Hausman test
+h <- hausman.systemfit( fit2sls, fit3sls )
+print( h )
+
+## Comment: 
+	# from the p-value of the Huasman test statistic - 0.78 is higher than any standard, we fail reject the null hypothesis that log-faminc in exogeneous
 

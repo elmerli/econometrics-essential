@@ -114,6 +114,77 @@ cv.error # cross validation error
 
 
 
+###PROBLEM III
+#Creating function for misclassification rate
+#from stat.rutgers.edu/~yhung/Stat586/LDA/some%20examples%20in%20R.doc
+rm(misclassification.rate)
+misclassification.rate=function(tab){
+  num1=sum(diag(tab))
+  denom1=sum(tab)
+  signif(1-num1/denom1,3)
+}
+
+##Loading and preparing the data
+crime = na.omit(read.table("crime.txt"))
+attach(crime)
+#Creating categorical variable
+acr = mean(crime$V3)
+crime$crmcat = ifelse(crime$V3>acr, c("above"), c("below"))
+
+#Separating data into train (1972 data) and test (1978 data)
+train = subset(crime, V6<1)
+test = subset(crime, V6>0)
+
+##1. LDA, assuming the predictors in the question refer 
+##to those of the linear model in PS2 (clear up rates for 2 years). 
+#Fitting LDA on the training data
+lda1 = lda(crmcat~V4+V5, data=train)
+#Predicting on test data
+prdlda = predict(lda1, newdata = test)$class
+#Table of misclassifications
+tab = table(prdlda, test$crmcat)
+#Misclassification rate
+misclassification.rate(tab)
+#LDA has a 24.5% misclassification rate
+
+##2. Now with QDA
+qda1 = qda(crmcat~V4+V5, data=train)
+#Predicting
+prdqda = predict(qda1, newdata = test)$class
+tab2 = table(prdqda, test$crmcat)
+#Misclassification rate
+misclassification.rate(tab2)
+#QDA has a misclassifiaction rate of 18.9%, so it performed better than LDA.
+
+##3. Now KNN. I choose K=19 based on 15 repeats of 10-fold cross validation, 
+#following example in:
+#http://stats.stackexchange.com/questions/31579/what-is-the-optimal-k-for-the-k-nearest-neighbour-classifier-on-the-iris-dat 
+model <- train(
+  cat~V6+V4+V5, 
+  data=crime, 
+  method='knn',
+  tuneGrid=expand.grid(.k=1:25),
+  metric='Accuracy',
+  trControl=trainControl(
+    method='repeatedcv', 
+    number=10, 
+    repeats=15))
+model
+plot(model)
+#Plot shows that accuracy is highest at k=19, so I choose that to fit kNN:
+
+#Choosing numeric columns for kNN (won't run with non-numeric)
+knntest = test[,1:8]
+knntrain = train[,1:8]
+#Creating labels for cl argument of knn function
+test_labels = test[,13]
+#Fitting kNN
+kNN = knn(train = knntrain, test = knntest, cl = test_labels, k=19)
+#Calculating proportion of correct classifications
+#(following example in https://rstudio-pubs-static.s3.amazonaws.com/123438_3b9052ed40ec4cd2854b72d1aa154df9.html)
+100*sum(test_labels == kNN)/100
+#kNN correctly classifies 41% of observations, which is less than LDA and QDA. 
+#from the three methods, QDA had the best results.
 
 
 
