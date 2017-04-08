@@ -9,11 +9,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 knitr::opts_knit$set(root.dir = '/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS3')
 ```
+
 ##################################################
 # Startup
 ##################################################
 
-## Include libraries
+### Include libraries
 ```{r, message=FALSE, warning=FALSE}
 library(readr)
 library(tidyr)
@@ -27,15 +28,15 @@ setwd('/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II
 # Problem 2
 ##################################################
 
-```{r}
+```{r, message=T, warning=F}
 library(readxl)
 weo <- read_excel("P2dataexcelcopy.xlsx", sheet = 'weoreptc (5)')
 names(weo) <- names(weo) %>% str_to_lower() %>% make.names(unique = TRUE, allow_ = T)
 ```
 
-## Import and Clean Data
+### Import and Clean Data
 
-```{r}
+```{r, message=T, warning=F}
 weo_2 <- weo %>%
 	mutate(variable = subject.descriptor, value = X2016) %>%
 	select(country,variable,value) %>%
@@ -60,83 +61,83 @@ weo_3 <- weo_2 %>%
 #####################
 # Problem 2.1 
 #####################
-```{r}
+```{r, message=T, warning=F}
 library(stargazer)
 ```
-## Run regression
-```{r}
+### Run regression
+```{r, message=T, warning=F}
 weo.probit <- glm(gen_str_bal_2 ~ export_vol_change + gdp_growth + gen_lend_borrow_net + gen_gov_rev + libor_six_mon + output_gap + gns, family = binomial(link = "probit"), data = weo_3)
 weo.probit_2 <- glm(gen_str_bal_2 ~ export_vol_change + gdp_growth + gen_lend_borrow_net + gen_gov_rev + output_gap + gns, family = binomial(link = "probit"), data = weo_3)
 weo.probit_3 <- glm(gen_str_bal_2 ~ export_vol_change + gdp_growth + gen_lend_borrow_net + gen_gov_rev + gns, family = binomial(link = "probit"), data = weo_3)
 ```
-## Table the result
-```{r}
-summary(weo.probit)
+### Table the result
+
+```{r, message=T, warning=F}
 summary(weo.probit_2)
 summary(weo.probit_3)
-stargazer(weo.probit,type="text")
 stargazer(weo.probit_2,type="text")
 stargazer(weo.probit_3,type="text")
 ```
-## Comment: 
-	### The table is outputed by the stargazer function, together with the standard deviations
-	### The t-ratio is the estimate of the coefficients devided by their mean. 
+#### Comment: 
+The table is outputed by the stargazer function, together with the standard deviations
+The t-ratio is the estimate of the coefficients devided by their mean. 
 
 #####################
 # Problem 2.2
 #####################
 
-## Comment: 
-	### From the above two regression results, we can see that excluding six month libor rate and Output gap 
-	### in percent of potential GDP has significantly improve the explanatory power of the model. 
-	### This can be seen from the increased p-values of other variables once excluding these two, and the increased 
-	### AIC, from 4 to 14 to 32. This might because that these two vairables have too many missing values
-	### We then try to exclude change in volume of exports of goods and services, which is the least significant from last regression: 
-```{r}
-	weo.probit_4 <- glm(gen_str_bal_2 ~ gdp_growth + gen_lend_borrow_net + gen_gov_rev + gns, family = binomial(link = "probit"), data = weo_3)
-	summary(weo.probit_4)
-```
-	### but then we can see that the AIC is 30 now,lower than before.So we may conclude that there are no variables we want to exclude for now
+#### Comment: 
+From the above two regression results, we can see that excluding six month libor rate and Output gap 
+in percent of potential GDP has significantly improve the explanatory power of the model. 
+This might because that these two vairables have too many missing values
+We then try to exclude change in volume of exports of goods and services, which is the least significant from last regression: 
 
-	### For variables that we want to include, since our dependent variable is general government structural balance
-	### since we only have export, we may consider import as well. Also we may want to include savings cause that might have 
-	### implications for government investment and expenditure. 
+```{r, message=T, warning=F}
+weo.probit_4 <- glm(gen_str_bal_2 ~ gdp_growth + gen_lend_borrow_net + gen_gov_rev + gns, family = binomial(link = "probit"), data = weo_3)
+summary(weo.probit_4)
+```
+and then we can see that the AIC is 30 now,lower than before which is 32. So the model is performing better. 
+
+For variables that we want to include, since our dependent variable is general government structural balance
+since we only have export, we may consider import as well. Also we may want to include savings cause that might have 
+implications for government investment and expenditure. 
 
 #####################
 # Problem 2.3 - 2.4
 #####################
-```{r}
+
+```{r, message=T, warning=F}
 # install.packages("mfx") 
 library(mfx)
 
 weo.probitmfx <- probitmfx(formula = gen_str_bal_2 ~ export_vol_change + gdp_growth + gen_lend_borrow_net + gen_gov_rev + gns, atmean=FALSE, data = weo_3)
 weo.probitmfx
 ```
-## Comment: 
-	### From the regression output of probitmfx, we may observe that the marginal effects of gdp growth on the probability of deterioration of 
-	### government budget is -0.0355904. Note we've specified that atmean=FALSE, this is saying that the we calculates the average partial effects.
+#### Comment: 
+From the regression output of probitmfx, we may observe that the marginal effects of gdp growth on the probability of deterioration of 
+government budget is -0.0355904. Note we have specified that atmean=FALSE, this is saying that the we calculates the average partial effects.
 
-	### The standard error is given by: 0.0432227 as in the output of the regression.
+The standard error is given by: 0.0432227 as in the output of the regression.
 
 #####################
 # Problem 2.5
 #####################
-```{r}
+```{r, message=T, warning=F}
 weo_4 <- weo_3 %>% mutate(euro = ifelse(country =="Czech Republic"|country =="Iceland",1,ifelse(is.na(output_gap),0,ifelse(country == "Korea" | country == "Japan" | country == "Australia"|country == "Canada",0,1))))
 
 weo.probitmfx_2 <- probitmfx(formula = gen_str_bal_2 ~ export_vol_change + gdp_growth + gen_lend_borrow_net + gen_gov_rev + gns + euro, atmean=FALSE, data = weo_4)
 weo.probitmfx_2
 ```
-## Comment: 
-	### From the regression output, we can see that the marginal effects of being a EU country on the probability of deterioration of 
-	### government budget is 0.0899108. And this also the average partial effects.
+#### Comment: 
+From the regression output, we can see that the marginal effects of being a EU country on the probability of deterioration of 
+government budget is 0.0899108. And this also the average partial effects.
 
 ##################################################
 # Problem 3
 ##################################################
 
-## Import Data
-```{r}
+### Import Data
+```{r, message=T, warning=F}
 crime <- read.table("crime.txt")
 
 crime_1 <- crime %>%
@@ -150,66 +151,66 @@ test = subset(crime_1, d78>0)
 #####################
 # Problem 3.1 - LDA
 #####################
-```{r}
+```{r, message=T, warning=F}
 library(MASS)
 crime.lda <- lda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit")
 pr.lda <- predict(crime.lda,newdata = test) 
 ```
-## Show result as a table
-```{r}
+### Show result as a table
+```{r, message=T, warning=F}
 table(train$crime_compare, pr.lda$class, dnn = c('Actual','Predicted LDA')) 
 ```
 #####################
 # Problem 3.2 - QDA
 #####################
-```{r}
+```{r, message=T, warning=F}
 crime.qda <- qda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit")
 ```
-## Compare - Method 1: the build in cross-validation function in LDA and QDA
-```{r}
+### Compare - Method 1: the build in cross-validation function in LDA and QDA
+```{r, message=T, warning=F}
 crime.lda_cv <- lda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit",CV = TRUE)
 crime.qda_cv <- qda(crime_compare ~ clrprc1+clrprc2, data=train, na.action="na.omit",CV = TRUE)
 	# cmt: CV=TRUE generates leave-one-out cross validation.
 table(train$crime_compare, crime.lda_cv$class, dnn = c('Actual Group','Predicted LDA'))
 table(train$crime_compare, crime.qda_cv$class, dnn = c('Actual Group','Predicted QDA'))
 ```
-## Comment: 
-	# from the ouput table we can see very obviously that QDA did a better job at predicting since there are
-	# more groups predicted right by QDA. 
+### Comment: 
+from the ouput table we can see very obviously that QDA did a better job at predicting since there are
+more groups predicted right by QDA. 
 
-## Compare - Method 2: manul cross validation and compare MSE
-# predict on test dataset
-```{r}
+### Compare - Method 2: manul cross validation and compare MSE
+* predict on test dataset
+```{r, message=T, warning=F}
 	pr.qda <- predict(crime.qda,newdata = test)
 	# turn result to integer
-	pr.lda_class <- as.integer(pr.lda$class)
-	pr.qda_class <- as.integer(pr.qda$class)
+	pr.lda_class <- as.integer(as.character(pr.lda$class))
+	pr.qda_class <- as.integer(as.character(pr.qda$class))
 ```
-```{r}
-# caculate MSE
+* caculate MSE
+```{r, message=T, warning=F}
 MSE.lda <- sum((test$crime_compare - pr.lda_class)^2)/nrow(test)
 MSE.qda <- sum((test$crime_compare - pr.qda_class)^2)/nrow(test)
 
 print(paste(MSE.lda,MSE.qda))
 ```
-## Comment: 
-	# From the result of MSE - 1.21 for LDA and 1.11 for QDA we may conclude that QDA performs better
+### Comment: 
+From the result of MSE: 0.25 for LDA and 0.19 for QDA we may conclude that QDA performs better
 
 
 #####################
 # Problem 3.3 - kNN
 #####################
-```{r}
+```{r, message=T, warning=F}
 set.seed(100)
 library(class)
 ```
 # build train and test datasets
-```{r}
+```{r, message=T, warning=F}
 knntrain <- train[,c(4:5,14)]
 knntest <- test[,c(4:5,14)]
 ```
 # fit model, predict and see MSE
-```{r}
+```{r, message=T, warning=F}
 pr.knn <- knn(knntrain,knntest,knntrain$crime_compare, k = 1)
 table(pr.knn,knntest$crime_compare)
 pr.knn_class <- as.integer(pr.knn)
@@ -217,7 +218,7 @@ MSE.knn_0 <- sum((knntest$crime_compare - pr.knn_class)^2)/nrow(knntest)
 MSE.knn_0
 ```
 # try to find the minimum MSE
-```{r}
+```{r, message=T, warning=F}
 MSE.knn <- rep(0, 20)
 k <- 1:20
 for(x in k){
@@ -227,8 +228,8 @@ for(x in k){
 }
 plot(k, MSE.knn, type = 'b')
 ```
-## Comment: From the plotted graph we can see that the MSE is minimized at k=9, so we choose k=9 in this case
-```{r}
+### Comment: From the plotted graph we can see that the MSE is minimized at k=9, so we choose k=9 in this case
+```{r, message=T, warning=F}
 pr.knn <- knn(knntrain,knntest,knntrain$crime_compare, k = 9)
 table(pr.knn,knntest$crime_compare)
 pr.knn_class <- as.integer(pr.knn)
@@ -237,5 +238,5 @@ MSE.knn
 
 print(paste(MSE.lda,MSE.qda,MSE.knn))
 ```
-## Comment: we can see that the MSE for kNN with k set at 1 is 1.19, which less than LDA but more than QDA
+### Comment: we can see that the MSE for kNN with k set at 1 is 1.19, which less than LDA but more than QDA
 
