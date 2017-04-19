@@ -1,50 +1,68 @@
-# if you have AIC, want to minimize it
-
 ##################################################
 # Startup
 ##################################################
 
-# Include libraries
-library(readr)
-library(tidyr)
-library(dplyr)
-library(pryr)
- # library(plyr)
-library(knitr)
-library(stringr)
-library(ggplot2)
-
-setwd('/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS3')
-
-cat("/014")
-
-install.packages('')
-
+# Install useful functions
 install.packages("quantmod") 
 install.packages("xts")
 install.packages("tseries")
 install.packages("dynlm")
 
+`%S%` <- function(x, y) {
+  paste0(x, y)
+}
+# Include libraries
+library(readr)
+library(tidyr)
+library(dplyr)
+library(pryr)
 library(quantmod) 
 library(xts)
 library(tseries)
 library(dynlm)
 
-# Part 1
-getSymbols("INDPRO",src="FRED")
-summary()
-plot(INDPRO$INDPRO)
-# time index
-INDPRO$t <- c(1:dim(INDPRO)[1])
-# log output
-INDPRO$LPRO <- log(INDPRO$INDPRO)
-	# lag for 15 periods
+setwd('/Users/elmerleezy/Google Drive/Wagner/Semester 4/Applied Stats & Econo II/Prob Sets/PS4')
 
+################################################
+# Problem IV
+################################################
 
-# Part 2 Info criterion
+# Get data
+	getSymbols("INDPRO",src="FRED")
+	plot(INDPRO$INDPRO) 
+
+# Create useful variables
+INDPRO$t <- c(1:dim(INDPRO)[1]) # time indicator
+INDPRO$LPRO <- log(INDPRO$INDPRO) # log output
+INDPRO$LLPRO <- lag(INDPRO$LPRO,1) # lag output by 1 period
+INDPRO$DLPRO <- diff(INDPRO$LPRO) # difference in lag output
+
+# Lag difference in lag output
+INDPRO <- data.frame(INDPRO)
+for(i in 1:15) {
+  DLPROlag <- 'DLPRO' %S% i
+  INDPRO[[DLPROlag]] <- lag(INDPRO$DLPRO,i)
+}
+
+# Info criterion & Run regressions with different lags 
+fit01 <- lm(LPRO ~ t + LLPRO + DLPRO + DLPRO1, data=INDPRO)
+var <- paste0(colnames(INDPRO[,3:5]),sep = " + ")
+fit01 <- lm(LPRO ~  paste0(colnames(INDPRO[,3:5]), sep = " + ") t, data=INDPRO)
+
+colnames(INDPRO[,2:5])
+paste0(colnames(INDPRO[,2:5]), sep = " + ")
+
+fit02 <- lm(LPRO ~ t + LLPRO + DLPRO + DLPRO1 + DLPRO2, data=INDPRO)
+fit03 <- lm(LPRO ~ t + LLPRO + DLPRO + DLPRO1 + DLPRO2 + DLPRO3, data=INDPRO)
 
 AIC <- NULL
 BIC <- NULL
+
+for(i in 1:3) {
+  fit <- 'fit' %S% i
+  INDPRO[[DLPROlag]] <- lag(INDPRO$DLPRO,i)
+}
+
 
 fit <- lm(LPRO ~ t + LLPRO + DLPRO + DLPRO1, data=INDPRO)
 AIC[1] <- AIC(fit)
