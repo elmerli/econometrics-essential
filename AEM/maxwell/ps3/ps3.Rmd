@@ -1,0 +1,358 @@
+---
+title: "AEM: PS3"
+author: "Maxwell Austensen"
+date: "November 16, 2016"
+output: html_notebook
+---
+
+```{r, message=FALSE, warning=FALSE}
+# Install packages if needed
+package_list <- c("tidyverse", "stargazer", "knitr", "haven", "stringr", "sandwich", "rdd")
+new_packages <- package_list[! package_list %in% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+
+library(tidyverse)
+library(rdd)
+
+# Modification to stargazer() - escapes "*" to prevent html vs markdown confusion
+stargazer_html <- function(...) {
+  capture.output(stargazer::stargazer(..., type = "html", header = FALSE)) %>%
+  stringr::str_replace_all("\\*", "\\\\*") %>% 
+  paste(collapse = "\n") %>%
+  cat("\n")
+}
+```
+
+***
+
+## Part 1
+
+![](./ps3_q1.png)
+
+```{r}
+lne_win <- (1.294888*1) + (.3392861*.50) + (2.533112*.50*1) + (-2.428141*(.50^2)*1) + (.233716*(.50^2))
+
+lne_lose <- (1.294888*0) + (.3392861*.50) + (2.533112*.50*0) + (-2.428141*(.50^2)*0) + (.233716*(.50^2))
+
+lne_win - lne_lose
+```
+
+<br>
+
+1\*win + .50\*voteshare + 1\*.50\*win_vote + 1\*.50^2\*win_vote_2 + .50^2\*vote_2
+
+The exact value of the jump in the natural logarithm of federal expenditure within the district at 0.50 is 1.954409. 
+
+
+```{r}
+# Load Data
+clark <- haven::read_stata("http://users.nber.org/~rdehejia/!@$AEM/Problem%20Sets/ps3/PS%203%20-%20Clark.dta")
+glimpse(clark)
+```
+
+***
+
+```{r}
+# Helper function to add features constant in all subsequent graphs
+rd_plot_starter <- function(y) {
+  if(y=="dpass") {
+    y_title <- "Change in pass rate of pupils \n(year immediately prior and two years after vote)"
+  } else if(y=="passrate2") {
+    y_title <- "Pass rate of pupils two years after vote"
+  } else if(y=="passrate0") {
+    y_title <- "Pass rate of pupils in the year immediately prior to the vote"
+  } else {
+    y_title = NULL
+  }
+  
+  clark %>% 
+    ggplot(aes_string("vote", y)) +
+    geom_point(aes(color = factor(win)), alpha = 0.5) +
+    guides(color = FALSE, alpha = FALSE) +
+    labs(
+      x = "Percentage vote in favour of the GM status",
+      y = y_title
+    ) +
+    theme_minimal()
+}
+```
+
+## Part 2
+
+```{r}
+rd_plot_starter("dpass") +
+  geom_smooth(
+    method = "lm", 
+    formula = y ~ (x > 50) + poly(x, 2, raw = TRUE), 
+    color = "black",
+    level = .95
+  ) +
+  ggtitle("Quadratic fit, allowing jump at win threshold")
+```
+
+```{r}
+rd_plot_starter("dpass") +
+  geom_smooth(
+    method = "lm", 
+    formula = y ~ (x > 50) + poly(x, 3, raw = TRUE), 
+    color = "black",
+    level = .95
+  ) +
+  ggtitle("Cubic fit, allowing jump at win threshold")
+```
+
+
+```{r}
+rd_plot_starter("dpass") +
+  geom_smooth(
+    data = filter(clark, between(vote, 40, 60)),
+    aes(vote, dpass), 
+    method = "lm", formula = y ~ (x > 50) + poly(x, 3, raw = TRUE),
+    color = "black",
+    level = .95
+  ) +
+  ggtitle("Local cubic fit, allowing jump at win threshold (range: 40%-60%)")
+```
+
+
+
+```{r}
+rd_plot_starter("dpass") +
+  geom_smooth(
+    data = filter(clark, between(vote, 40, 60)),
+    aes(vote, dpass), 
+    method = "lm", formula = y ~ (x > 50) + x, 
+    color = "black",
+    level = .95
+  ) +
+  ggtitle("Local linear fit, allowing jump at win threshold (voteshare range: 40%-60%)")
+```
+
+
+
+```{r}
+rd_plot_starter("dpass") +
+  geom_smooth(
+    aes(group = factor(win)),
+    method = "loess", 
+    color = "black", 
+    level = .95
+  ) +
+  ggtitle("Loess smoother, applied separately over win and lose voteshares")
+```
+
+***
+
+```{r}
+# Helper function to fit model and get robust standard errors
+model_prep <- function(.data, dep_var, rng){
+  # construct formula
+  f <- paste0(substitute(dep_var), " ~ win")
+  
+  # fit model on subset fo data defined by range of vote share
+  m <-
+    .data %>% 
+    filter(between(vote, rng[1], rng[2])) %>% 
+    lm(formula = f, data = .)
+  
+  # Robust stanadard errors (replicating Stat's robust option)
+  robust_se <- 
+    m %>% 
+    vcovHC(type = "HC1") %>% 
+    diag() %>% 
+    sqrt()
+  
+  rng_char <- paste0("(", rng[1], ", ", rng[2], ")")
+  
+  return(list(m, robust_se, rng_char))
+}
+```
+
+## Part 3
+
+```{r, results = 'asis'}
+m1 <- clark %>% model_prep(dpass, c(15, 85))
+m2 <- clark %>% model_prep(dpass, c(0, 100))
+m3 <- clark %>% model_prep(dpass, c(25, 75))
+m4 <- clark %>% model_prep(dpass, c(40, 60))
+
+stargazer_html(
+  m1[1], m2[1], m3[1], m4[1],
+  se = list(m1[[2]], m2[[2]], m3[[2]], m4[[2]]),
+  keep.stat = c("n", "rsq"),
+  omit = "Constant",
+  add.lines = list(c("Sample Vote Range", m1[[3]], m2[[3]], m3[[3]], m4[[3]]))
+)
+```
+
+<br>
+
+Clark chose the sample restriction (15, 85) because he believed that, after the regression adjustment for voteshare, that schools within that range could be reasonably compared with quasi-experimental interpretation. This is because inside of that that range he believed that schools could be assumed to be roughly equal to one another at baseline on relevant dimensions that might effect pass rates, whereas schools outside of that range could be seen to have different baseline pass rates.
+
+Why do subsequent columns of Table 3a include functions of the voteshare, both on
+their own and interacted with the win/lose variable? 
+
+With all the different ranges the effect estimates remained fairly close, and all were statistically significant at the 1% level using robust standard errors, except for the smallest range (40, 60) where the estimate was significant at the 5% level.
+
+As Clark notes in his paper, there is a trade-off to consider between lack of precision of the estimate (which is of more concern when using only the close elections) and the risk of mispecification of the model when using votes that are further from the win threshold.
+
+The scatter plots are helpful when deciding on the specification because they allow one to get a sense of what functional form the data approximate. For example, here the data appears to be approximately linear and parallel on either side of the threshold. Furthermore, the plots help to identify what range around the threshold might be appropriate for sample selection. In these plots it seems as though at less than 25% and greater than 85% the variance increases significantly and the form differs from the range closer to the threshold.
+
+
+***
+
+## Part 4
+
+```{r}
+rd_plot_starter("passrate2") +
+  geom_smooth(
+    aes(group = factor(win)),
+    method = "loess", 
+    color = "black", 
+    level = .95
+  ) +
+  ggtitle("Loess smoother, applied separately over win and lose voteshares")
+```
+
+
+```{r, results = 'asis'}
+m1 <- clark %>% model_prep(passrate2, c(15, 85))
+m2 <- clark %>% model_prep(passrate2, c(0, 100))
+m3 <- clark %>% model_prep(passrate2, c(25, 75))
+m4 <- clark %>% model_prep(passrate2, c(40, 60))
+
+stargazer_html(
+  m1[1], m2[1], m3[1], m4[1],
+  se = list(m1[[2]], m2[[2]], m3[[2]], m4[[2]]),
+  keep.stat = c("n", "rsq"),
+  omit = "Constant",
+  add.lines = list(c("Sample Vote Range", m1[[3]], m2[[3]], m3[[3]], m4[[3]]))
+)
+```
+
+<br>
+
+The results using `passrate2` differ substantially from those using `dpass`, most notably in that they are not statistically significant using any of the four sample ranges. The positive and significant results for the change from baseline and the lack of significant results for the post intervention outcomes suggests that schools on either side of the win threshold differed in their outcome variable at baseline. This in theory would seem to violate the requirement for regression discontinuity design that the schools on either side of the threshold do not differ significantly on any pre-treatment variables relevant to the post-treatment outcome. However, in practice, Clark suggests the fact that the pass rates are uniformly higher reflects "the general increase in pass rates seen over the 1990s."
+
+```{r}
+rd_df <- function(dep_var, bw = NULL) {
+  f <- paste0(dep_var, " ~ vote")
+  
+  rd_obj <- clark %>% RDestimate(data = ., formula = f, cutpoint = 50, bw = bw)
+  
+  tibble(
+    `Dependant Variable` = dep_var,
+    `Optimal Bandwidth` = rd_obj$bw[1], 
+    Observations = rd_obj$obs[1],
+    `LATE Estimate` = rd_obj$est[1],
+    `Standard Error` = rd_obj$se[1],
+    `P Value` = rd_obj$p[1]
+  )
+}
+
+bind_rows(rd_df("dpass"), rd_df("passrate2")) %>% 
+  knitr::kable(digits = 3)
+
+```
+
+<br>
+
+The results from the sharp RD local linear regressions using `dpass` as the outcome differ from the first specification using the sample 15-85 and only the binary `win` indicator, in that the estimate is larger, but most importantly in that it is not significant. The results using `passrate2` as the dependent variable also differ when using the local linear regression: the estimates are still not significant, but the effect estimate is negative where before it was positive. the Imbens-Kalyanaraman optimal bandwidths used for both outcome variables is small and thus includes only 105 and 157 observations for `dpass` and `passrate2`, respectively which limits the precision of the estimate considerably compared to the first specifications that include 524 observations in the sample voteshare range (15, 85).
+
+The fact that the effect estimates are not significant in the local linear model raises some doubts about the robustness of the results from the polynomial specifications used by Clark. However, looking at the plot below, it does not appear that the third-order polynomial used by Clark is exaggerating the discontinuity at the threshold
+
+
+```{r}
+rd_plot_starter("dpass") +
+  geom_smooth(
+    data = filter(clark, between(vote, 15, 85)),
+    method = "lm", formula = y ~ (x > 50) + poly(x, 3, raw = TRUE),
+    color = "black",
+    level = .95
+  ) +
+  ggtitle("Cubic fit, allowing jump at win threshold (voteshare range: 15%-85%)")
+```
+
+
+***
+
+## Part 5
+
+
+```{r}
+rd_plot_starter("passrate0") +
+  geom_smooth(
+    aes(group = factor(win)),
+    method = "loess", 
+    color = "black", 
+    level = .95
+  ) +
+  ggtitle("Loess smoother, applied separately over win and lose voteshares")
+```
+
+
+
+```{r, results = 'asis'}
+
+optimal_bw <- RDestimate(data = clark, formula = dpass ~ vote, cutpoint = 50)$bw[[1]]
+optimal_bw_range <- c(round((50-optimal_bw), 1), round((50+optimal_bw), 1))
+
+m1 <- clark %>% model_prep(passrate0, c(15, 85))
+m2 <- clark %>% model_prep(passrate0, c(0, 100))
+m3 <- clark %>% model_prep(passrate0, c(25, 75))
+m4 <- clark %>% model_prep(passrate0, c(40, 60))
+m5 <- clark %>% model_prep(passrate0, optimal_bw_range)
+
+stargazer_html(
+  m1[1], m2[1], m3[1], m4[1], m5[1],
+  se = list(m1[[2]], m2[[2]], m3[[2]], m4[[2]], m5[[2]]),
+  keep.stat = c("n", "rsq"),
+  omit = "Constant",
+  add.lines = list(c("Sample Vote Range", m1[[3]], m2[[3]], m3[[3]], m4[[3]], m5[[3]]))
+)
+```
+
+<br>
+
+It is true that among all the schools there is a negative and significant effect of a winning vote for GM and baseline pass rates, however this effect is not significant among sub samples that exclude schools with vote shares furthest from the cutoff. It is still somewhat concerning that even though the estimates are not significant, the sign remains negative in all sub samples considered above including the Imbens-Kalyanaraman optimal bandwidth used in the local linear models.
+
+***
+
+## Part 6
+
+```{r}
+dc_test <- DCdensity(clark$vote, cutpoint = 50, verbose = TRUE, plot = TRUE)
+```
+
+The results of the McCrary density test show that, with a p value of `r dc_test`, we cannot reject the null hypothesis that the discontinuity in the density function of the running variable vote-share is discontinuous at the win threshold (50%).
+
+***
+
+## Part 7
+
+```{r}
+bandwidths <- 
+  seq(0.75, 1.25, 0.10) %>% 
+  map_dbl(~ .x * optimal_bw) %>% 
+  c(optimal_bw, .)
+
+rd_robust <- RDestimate(data = clark, formula = dpass ~ vote, cutpoint = 50, bw = bandwidths)
+
+tibble(
+  Bandwidth = rd_robust$bw, 
+  `% of Optimal Bandwidth` = c(optimal_bw, seq(75, 125, 10)),
+  Observations = rd_robust$obs,
+  `LATE Estimate` = rd_robust$est,
+  `Standard Error` = rd_robust$se,
+  `P Value` = rd_robust$p,
+  `95% Confidence Interval` = map2_chr(rd_robust$ci[, 1], rd_robust$ci[, 2], 
+                                ~ stringr::str_c(round(.x, 3), round(.y, 3), sep = ", "))
+) %>% 
+  knitr::kable(digits = 3)
+```
+
+
+The effect estimates from the local linear models are consistently positive and within a range of about 3 to 4 percent in the change in pass rate, and are also all not significant at the 10% level. 
+
+
+

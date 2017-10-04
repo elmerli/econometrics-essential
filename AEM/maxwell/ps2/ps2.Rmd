@@ -1,0 +1,247 @@
+---
+title: "AEM: PS2"
+author: "Maxwell Austensen"
+date: "`r Sys.Date()`"
+output: html_notebook
+---
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+
+# Install packages if needed
+package_list <- c("AER", "ivpack", "lfe", "stargazer", "knitr", "haven", "tidyverse", "stringr")
+new_packages <- package_list[! package_list %in% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+
+library(AER)
+library(ivpack)
+library(lfe)
+library(tidyverse)
+library(stargazer)
+
+# Modification to stargazer() - escapes "*" to prevent html vs markdown confusion
+stargazer_html <- function(...) {
+  capture.output(stargazer::stargazer(..., type = "html", header = FALSE)) %>%
+  stringr::str_replace_all("\\*", "\\\\*") %>% 
+  paste(collapse = "\n") %>%
+  cat("\n")
+}
+```
+
+## 1: Stata IV Regression Example
+
+```{r}
+auto <- haven::read_stata("http://www.stata-press.com/data/r9/auto.dta")
+```
+
+```{r, results='asis'}
+first <- lm(mpg ~ displacement, auto)
+stargazer_html(first)
+```
+
+```{r, results='asis'}
+second <- ivreg(formula = price ~ mpg | displacement, data = auto)
+stargazer_html(second)
+```
+
+```{r}
+# second %>% robust.se() %>% stargazer_html()
+rm(auto, first, second)
+```
+
+---
+
+## 2: Summary Statistics
+
+
+```{r}
+url <- "http://users.nber.org/~rdehejia/!@$AEM/Problem%20Sets/ps2/generateddata_20120221_sub.dta"
+
+raw <- haven::read_stata(url)
+```
+
+```{r}
+india_data <- 
+  raw %>% 
+  select(
+    state,
+    nic_io = NIC_io,
+    round,
+    workers_total = Total_worker,
+    gva_yearly = Yearly_gva_production_real,
+    gva_ln_yearly = lnYearly_gva,
+    labor_reg = labor_reg_besley_flex2,
+    manu_total = manufacturing_total,
+    post,
+    labor_manu,
+    manu_all = allmanufacturing,
+    manu_post,
+    manu_share = manshare,
+    manu_post_share,
+    labor_manu_share
+  )
+```
+
+
+```{r}
+select(raw, noquote(order(colnames(raw)))) %>% names()
+```
+
+```{r}
+summary_vars <-
+  india_data %>% 
+  select(round, gva_ln_yearly, labor_reg, manu_all, manu_total)
+```
+
+### Full Sample
+```{r}
+summary_vars %>% select(-round) %>% map(summary)
+```
+
+### Round 57 Sample
+```{r}
+summary_vars %>% filter(round == 57) %>% select(-round) %>% map(summary)
+```
+
+### Round 63 Sample
+```{r}
+summary_vars %>% filter(round == 63) %>% select(-round) %>% map(summary)
+```
+
+```{r}
+india_data %>% 
+  group_by(round) %>% 
+  select(round, gva_yearly, workers_total) %>% 
+  summarise_all(mean, na.rm = TRUE) %>% 
+  gather("variable", "value", -round) %>% 
+  spread(round, value) %>% 
+  transmute(
+    variable = variable,
+    growth = (`63` - `57`)/`57`
+  ) %>% 
+  knitr::kable(digits = 2)
+```
+
+
+
+---
+
+
+## 3: Reduced-form Regressions
+
+### a.
+```{r, results='asis'}
+india_data <- india_data %>% mutate(round_63 = ifelse(round==63, 1, 0))
+
+india_data %>% 
+  filter(round == 57) %>% 
+  lm(gva_ln_yearly ~ labor_reg, data = .) %>% 
+  stargazer_html()
+```
+
+### b.
+```{r, results='asis'}
+india_data %>% 
+  filter(round == 63) %>% 
+  lm(gva_ln_yearly ~ labor_reg, data = .) %>% 
+  stargazer_html()
+```
+
+
+### c.
+```{r, results='asis'}
+india_data %>% 
+  lm(gva_ln_yearly ~ labor_reg + round_63, data = .) %>% 
+  stargazer_html()
+```
+
+
+### d.
+```{r, results='asis'}
+india_data %>% 
+  lm(gva_ln_yearly ~ labor_reg*round_63, data = .) %>% 
+  stargazer_html()
+```
+
+## e.
+
+```{r, results='asis'}
+india_data %>% 
+  felm(gva_ln_yearly ~ labor_reg + round_63 | state + nic_io, data = .) %>% 
+  stargazer_html(
+    add.lines = list(c("State Fixed Effects", "Yes"),
+                     c("Industry Fixed Effects", "Yes"))
+  )
+```
+
+```{r, results='asis'}
+india_data %>% 
+  felm(gva_ln_yearly ~ labor_reg*round_63 | state + nic_io, data = .) %>% 
+  stargazer_html(
+    add.lines = list(c("State Fixed Effects", "Yes"),
+                     c("Industry Fixed Effects", "Yes"))
+  )
+```
+
+
+---
+
+
+## 4: Main regression of Interest
+
+```{r, results ='asis'}
+india_data %>% 
+  lm(gva_ln_yearly ~ manu_all + manu_post + post, data = .) %>% 
+  stargazer_html()
+```
+
+### a.
+```{r, results ='asis'}
+india_data %>% 
+  lm(gva_ln_yearly ~ manu_all + manu_post + post + labor_reg, data = .) %>% 
+  stargazer_html()
+```
+
+### b.
+```{r, results ='asis'}
+india_data %>% 
+  lm(gva_ln_yearly ~ manu_all + manu_post + post*labor_reg, data = .) %>% 
+  stargazer_html()
+```
+
+### c.
+```{r, results ='asis'}
+india_data %>% 
+  felm(gva_ln_yearly ~ manu_all + manu_post + post*labor_reg | state + nic_io, data = .) %>% 
+  stargazer_html(
+    add.lines = list(c("State Fixed Effects", "Yes"),
+                     c("Industry Fixed Effects", "Yes"))
+  )
+```
+---
+
+
+
+## 5: Instrumental Variables Specifications
+
+### a.
+```{r, results='asis'}
+india_data %>% 
+  ivreg(gva_ln_yearly ~ manu_all | labor_reg, data = .) %>% 
+  # robust.se() %>%
+  stargazer_html()
+```
+
+### b.
+```{r, results='asis'}
+india_data %>% 
+  felm(gva_ln_yearly ~ manu_all + labor_reg | state + nic_io | (manu_all ~ labor_reg), data = .) %>% 
+  # robust.se() %>%
+  stargazer_html()
+```
+
+
+
+
+
+
+

@@ -1,0 +1,950 @@
+------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  H:\GitHub\aem\ps4\ps4.log
+  log type:  text
+ opened on:  11 Dec 2016, 14:11:24
+
+. /****************************************************************************
+> Program Name:   ps4.do
+> Location:       GitHub\aem\ps2
+> Author:         Maxwell Austensen
+> Date Created:   06 Dec 2016
+> Project:        Problem Set 2 - Instrumental Variables
+> Class:          Advanced Empirical Methods
+> ****************************************************************************/
+. 
+. clear all
+
+. clear matrix
+
+. macro drop _all
+
+. set more off, perm
+(set more preference recorded)
+
+. set maxvar 10000
+
+
+. 
+. * cd "/Users/Maxwell/Box Sync/aem/ps4"
+. cd "C:\Users\austensen\Box Sync\aem\ps4"
+C:\Users\austensen\Box Sync\aem\ps4
+
+. 
+. * ssc install nnmatch
+. * ssc install psmatch2
+. * ssc install teffects
+. 
+. ********************************************************************************
+. * Q1 
+. *****
+. 
+. qui{
+
+. 
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. keep if data_id == "Dehejia-Wahba Sample"
+(2,490 observations deleted)
+
+. 
+. make_table age education black hispanic nodegree married re74 re75
+
+table1[4,8]
+                 age  education      black   hispanic   nodegree    married       re74       re75
+ trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
+comp_mean      25.05      10.09        .83        .11        .83        .15    2107.03    1266.91
+diff_mean       -.76       -.26       -.02        .05        .13       -.04      11.45    -265.15
+  diff_se        .68        .17        .04        .03        .04        .04     516.48     303.16
+
+. 
+. /*
+>                  age  education      black   hispanic   nodegree    married       re74       re75
+>  trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
+> comp_mean      25.05      10.09        .83        .11        .83        .15    2107.03    1266.91
+> diff_mean       -.76       -.26       -.02        .05        .13       -.04      11.45    -265.15
+>   diff_se        .68        .17        .04        .03        .04        .04     516.48     303.16
+> */
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+(260 observations deleted)
+
+. 
+. make_table age education black hispanic nodegree married re74 re75
+
+table1[4,8]
+                 age  education      black   hispanic   nodegree    married       re74       re75
+ trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
+comp_mean      34.85      12.12        .25        .03        .31        .87   19428.75   19063.34
+diff_mean       9.03       1.77       -.59       -.03        -.4        .68   17333.17   17531.28
+  diff_se        .78        .23        .03        .01        .04        .03     990.69    1001.91
+
+. 
+. /*
+>                  age  education      black   hispanic   nodegree    married       re74       re75
+>  trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
+> comp_mean      34.85      12.12        .25        .03        .31        .87   19428.75   19063.34
+> diff_mean       9.03       1.77       -.59       -.03        -.4        .68   17333.17   17531.28
+>   diff_se        .78        .23        .03        .01        .04        .03     990.69    1001.91
+> */
+. 
+. 
+. ********************************************************************************
+. * Q 2
+. ******
+. 
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+(260 observations deleted)
+
+. 
+. * Prep data sets for mergin back in after matching procedure
+. * create id and index vars to match on
+. gen id = _n
+
+. gen index = _n
+
+. 
+. * rename variables to accomdate wide format created by matching
+. preserve
+
+. rename * *_1m
+
+. rename id_1m id
+
+. save "treat", replace
+file treat.dta saved
+
+. restore
+
+. 
+. preserve
+
+. rename * *_0m
+
+. rename index_0m index
+
+. save "comparison", replace
+file comparison.dta saved
+
+. restore
+
+. 
+. 
+. nnmatch re78 treat re74 re75, keep(match_info) replace
+file match_info.dta saved
+
+Matching estimator:  Average Treatment Effect 
+
+Weighting matrix: inverse variance          Number of obs          =      2675
+                                            Number of matches  (m) =         1
+
+------------------------------------------------------------------------------
+        re78 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+        SATE |  -10475.37   3936.875    -2.66   0.008     -18191.5   -2759.233
+------------------------------------------------------------------------------
+Matching variables:  re74 re75
+
+. 
+. /*
+> ----------+----------------------------------------------------------------
+>      re78 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+> ----------+----------------------------------------------------------------
+>      SATE |  -10475.37   3936.875    -2.66   0.008     -18191.5   -2759.233
+> ----------+----------------------------------------------------------------
+> */
+. 
+. 
+. 
+. use "match_info", clear
+
+. 
+. keep if treat == 1
+(20,316 observations deleted)
+
+. 
+. * merge back in other covariates dropped in matching process
+. merge m:1 id using "treat", ///
+>         keepusing(age_1m education_1m black_1m hispanic_1m married_1m nodegree_1m) ///
+>         keep(master match) nogen
+(note: variable id was int, now float to accommodate using data's values)
+(label trt already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                            17,746  
+    -----------------------------------------
+
+. 
+. merge m:1 index using "comparison", ///
+>         keepusing(age_0m education_0m black_0m hispanic_0m married_0m nodegree_0m) ///
+>         keep(master match) nogen
+(note: variable index was int, now float to accommodate using data's values)
+(label trt already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                            17,746  
+    -----------------------------------------
+
+. 
+. * get one row per observation (from tie matches)
+. collapse (mean) re74_* re75_* education_* index, by(id)
+
+. 
+. * check quality of matching for re74
+. twoway (scatter re74_0m re74_1m) (lfit re74_0m re74_1m) || ///
+>         function y = x, ra(re74_0m) clpat(dash)
+
+. graph export "plot1.png", replace
+(file plot1.png written in PNG format)
+
+. 
+. reg re74_0m re74_1m
+
+      Source |       SS           df       MS      Number of obs   =       185
+-------------+----------------------------------   F(1, 183)       =  79357.93
+       Model |  4.5146e+09         1  4.5146e+09   Prob > F        =    0.0000
+    Residual |  10410655.2       183  56888.8261   R-squared       =    0.9977
+-------------+----------------------------------   Adj R-squared   =    0.9977
+       Total |  4.5250e+09       184  24592337.1   Root MSE        =    238.51
+
+------------------------------------------------------------------------------
+     re74_0m |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+     re74_1m |   1.013657   .0035983   281.71   0.000     1.006558    1.020757
+       _cons |  -26.57066   19.08837    -1.39   0.166    -64.23225    11.09092
+------------------------------------------------------------------------------
+
+.         * R-squared     =  0.9977
+. 
+. * check quality of matching for re74
+. twoway (scatter re75_0m re75_1m) (lfit re75_0m re75_1m)  || ///
+>         function y = x, ra(re75_0m) clpat(dash)
+
+. graph export "plot2.png", replace
+(file plot2.png written in PNG format)
+
+. 
+. reg re75_0m re75_1m
+
+      Source |       SS           df       MS      Number of obs   =       185
+-------------+----------------------------------   F(1, 183)       =  25597.68
+       Model |  1.9504e+09         1  1.9504e+09   Prob > F        =    0.0000
+    Residual |    13943464       183  76193.7924   R-squared       =    0.9929
+-------------+----------------------------------   Adj R-squared   =    0.9929
+       Total |  1.9643e+09       184  10675696.4   Root MSE        =    276.03
+
+------------------------------------------------------------------------------
+     re75_0m |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+     re75_1m |   1.011338   .0063211   159.99   0.000     .9988665     1.02381
+       _cons |  -5.151831   22.48655    -0.23   0.819    -49.51806     39.2144
+------------------------------------------------------------------------------
+
+.         * R-squared     =  0.9929
+. 
+.         
+. ********************************************************************************
+. * Q 3
+. ******
+. 
+. * check balance of education treatment and matched comparison
+. twoway (scatter education_0m education_1m) (lfit education_0m education_1m) || ///
+>         function y = x, ra(education_0m) clpat(dash)
+
+. graph export "plot3.png", replace
+(file plot3.png written in PNG format)
+
+. 
+. ttest education_1m ==  education_0m
+
+Paired t test
+------------------------------------------------------------------------------
+Variable |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+educa~1m |     185    10.34595    .1478259     2.01065    10.05429     10.6376
+educa~0m |     185    11.29366    .1508064    2.051189    10.99613    11.59119
+---------+--------------------------------------------------------------------
+    diff |     185   -.9477146    .2238233    3.044325   -1.389305   -.5061246
+------------------------------------------------------------------------------
+     mean(diff) = mean(education_1m - education_0m)               t =  -4.2342
+ Ho: mean(diff) = 0                              degrees of freedom =      184
+
+ Ha: mean(diff) < 0           Ha: mean(diff) != 0           Ha: mean(diff) > 0
+ Pr(T < t) = 0.0000         Pr(|T| > |t|) = 0.0000          Pr(T > t) = 1.0000
+
+.         * mean(diff) -.9477146   (se) .2238233
+. 
+. 
+. ********************************************************************************
+. * Q 4
+. *******
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+(260 observations deleted)
+
+. 
+. gen re74_sq = re74 ^ 2
+
+. gen re75_sq = re75 ^ 2
+
+. 
+. local covariates "education black hispanic married re74 re75 re74_sq re75_sq"
+
+. 
+. nnmatch re78 treat `covariates', keep(match_info2) replace
+file match_info2.dta saved
+
+Matching estimator:  Average Treatment Effect 
+
+Weighting matrix: inverse variance          Number of obs          =      2675
+                                            Number of matches  (m) =         1
+
+------------------------------------------------------------------------------
+        re78 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+        SATE |  -11653.45   3990.061    -2.92   0.003    -19473.83   -3833.078
+------------------------------------------------------------------------------
+Matching variables:  education black hispanic married re74 re75 re74_sq re75_sq
+
+. 
+. *        re78 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+. *-------------+----------------------------------------------------------------
+. *        SATE |  -11653.45   3990.061    -2.92   0.003    -19473.83   -3833.078
+. 
+. 
+. use "match_info2", clear
+
+. 
+. keep if treat == 1
+(2,622 observations deleted)
+
+. 
+. * merge back in other covariates dropped in matching process
+. merge m:1 id using "treat", keepusing(age nodegree_1m) keep(master match) nogen
+(note: variable id was int, now float to accommodate using data's values)
+(label trt already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                               315  
+    -----------------------------------------
+
+. 
+. merge m:1 index using "comparison", keepusing(age nodegree_0m) keep(master match) nogen
+(note: variable index was int, now float to accommodate using data's values)
+(label trt already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                               315  
+    -----------------------------------------
+
+. 
+. drop re74 re75 re74_sq re75_sq
+
+. local collapse_vars = "treat re78_* age_* education_* black_* hispanic_* nodegree_* married_* re74_* re75_
+> * km index dist"
+
+. 
+. collapse (mean) `collapse_vars', by(id) 
+
+. 
+. local vars "age education black hispanic nodegree married re74 re75"
+
+. 
+. matrix table1 = J(3, 8, .)
+
+. matrix colnames table1 = `vars'
+
+. matrix rownames table1 = trt_mean comp_mean diff_se
+
+. 
+. matrix list table1 
+
+table1[3,8]
+                 age  education      black   hispanic   nodegree    married       re74       re75
+ trt_mean          .          .          .          .          .          .          .          .
+comp_mean          .          .          .          .          .          .          .          .
+  diff_se          .          .          .          .          .          .          .          .
+
+. 
+. local i = 1
+
+. foreach var in `vars' {
+  2. 
+.         qui ttest `var'_0m == `var'_1m
+  3.         
+.         matrix table1[1, `i'] = round(r(mu_2), 0.01)
+  4.         matrix table1[2, `i'] = round(r(mu_1), 0.01)
+  5.         matrix table1[3, `i'] = round(r(se), 0.01)
+  6.         
+.         local i = `i'+1
+  7. }
+
+. 
+. * Assess the quality of the matches for each covariate
+. matrix list table1
+
+table1[3,8]
+                 age  education      black   hispanic   nodegree    married       re74       re75
+ trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
+comp_mean      29.34       10.3        .84        .06        .71        .19    2521.42    1712.76
+  diff_se        .82        .03          0          0          0          0     113.68     114.88
+
+. 
+. *              age  education  black  hispanic  nodegree  married     re74     re75
+. * trt_mean   25.82      10.35    .84       .06       .71      .19  2095.57  1532.06
+. *comp_mean   29.34       10.3    .84       .06       .71      .19  2521.42  1712.76
+. *  diff_se     .82        .03      0         0         0        0   113.68   114.88
+. 
+. ttest re78_1 == re78_0
+
+Paired t test
+------------------------------------------------------------------------------
+Variable |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+  re78_1 |     185    6349.144    578.4229    7867.402    5207.949    7490.338
+  re78_0 |     185    4951.368     557.107    7577.474    3852.229    6050.507
+---------+--------------------------------------------------------------------
+    diff |     185    1397.775     777.192    10570.95   -135.5786    2931.129
+------------------------------------------------------------------------------
+     mean(diff) = mean(re78_1 - re78_0)                           t =   1.7985
+ Ho: mean(diff) = 0                              degrees of freedom =      184
+
+ Ha: mean(diff) < 0           Ha: mean(diff) != 0           Ha: mean(diff) > 0
+ Pr(T < t) = 0.9631         Pr(|T| > |t|) = 0.0737          Pr(T > t) = 0.0369
+
+. 
+. *        |      Mean  Std. Err. 
+. * re78_1 |  6349.144   578.4229   
+. * re78_0 |  4951.368    557.107   
+. *--------+----------------------
+. *  diff  | 1397.775     777.192
+. 
+. * Ha: mean(diff) != 0  
+. * Pr(|T| > |t|) = 0.0737 
+. 
+. 
+. 
+. use "nsw_dw.dta", clear
+
+. keep if data_id == "Dehejia-Wahba Sample"
+(2,490 observations deleted)
+
+. ttest re78, by(treat) 
+
+Two-sample t test with equal variances
+------------------------------------------------------------------------------
+   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+ Control |     260    4554.801    340.0931    5483.836    3885.102    5224.501
+ Treated |     185    6349.144    578.4229    7867.402    5207.949    7490.338
+---------+--------------------------------------------------------------------
+combined |     445    5300.764    314.3629    6631.492     4682.94    5918.588
+---------+--------------------------------------------------------------------
+    diff |           -1794.342    632.8534                -3038.11   -550.5745
+------------------------------------------------------------------------------
+    diff = mean(Control) - mean(Treated)                          t =  -2.8353
+Ho: diff = 0                                     degrees of freedom =      443
+
+    Ha: diff < 0                 Ha: diff != 0                 Ha: diff > 0
+ Pr(T < t) = 0.0024         Pr(|T| > |t|) = 0.0048          Pr(T > t) = 0.9976
+
+. 
+. * Experimental treatment effect estimate
+. /* --------------------------------------
+> ------------------------------------------------------------------------------
+>    Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+> ---------+--------------------------------------------------------------------
+>  Control |     260    4554.801    340.0931    5483.836    3885.102    5224.501
+>  Treated |     185    6349.144    578.4229    7867.402    5207.949    7490.338
+> ---------+--------------------------------------------------------------------
+>     diff |           -1794.342    632.8534                -3038.11   -550.5745
+> ------------------------------------------------------------------------------
+> 
+>  Ha: diff != 0 
+>  Pr(|T| > |t|) = 0.0048 
+>  
+> */
+.  
+. ********************************************************************************
+. * Q 5
+. ******
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+(260 observations deleted)
+
+. 
+. gen re74_sq = re74 ^ 2
+
+. gen re75_sq = re75 ^ 2
+
+. 
+. local spec_5_vars "education black hispanic married re74 re75 re74_sq re75_sq"
+
+. 
+. qui logit treat `spec_5_vars'
+
+. 
+. predict p_score
+(option pr assumed; Pr(treat))
+
+. 
+. save "spec_5", replace
+file spec_5.dta saved
+
+. 
+. psgraph, t(treat) p(p_score)
+
+. graph export "plot4.png", replace
+(file plot4.png written in PNG format)
+
+. 
+. * randomize sort of dataset so ties are matched at random
+. set seed 20161206
+
+. gen u = uniform()
+
+. sort u
+
+. 
+. psmatch2 treat, pscore(p_score) outcome(re78) neighbor(1) ate
+There are observations with identical propensity score values.
+The sort order of the data could affect your results.
+Make sure that the sort order is random before calling psmatch2.
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+            re78  Unmatched |  6349.1435   21553.9209  -15204.7774   1154.61433   -13.17
+                        ATT |  6349.1435   4584.23534   1764.90816   1902.95748     0.93
+                        ATU | 21553.9209   6107.88894   -15446.032            .        .
+                        ATE |                          -14255.7427            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     2,490 |     2,490 
+   Treated |       185 |       185 
+-----------+-----------+----------
+     Total |     2,675 |     2,675 
+
+
+. 
+. local covariates "age education black hispanic nodegree married re74 re75"
+
+. 
+. pstest `covariates'
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+age                     | 25.816   28.627    -31.4 |  -3.09  0.002 |  0.50*
+education               | 10.346   10.605    -10.0 |  -1.09  0.275 |  0.63*
+black                   | .84324   .84324      0.0 |  -0.00  1.000 |     .
+hispanic                | .05946   .04865      5.2 |   0.46  0.647 |     .
+nodegree                | .70811   .56757     30.7 |   2.84  0.005 |     .
+married                 | .18919   .15676      8.8 |   0.82  0.411 |     .
+re74                    | 2095.6   1920.3      1.7 |   0.40  0.693 |  1.91*
+re75                    | 1532.1   1832.1     -3.0 |  -0.81  0.421 |  0.68*
+------------------------------------------------------------------------------
+* if variance ratio outside [0.75; 1.34]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.055     28.42    0.000     11.4       7.0      56.5*    1.34    100
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. /*
+> ------------------------------------------------------------------------------
+>                         |       Mean               |     t-test    |  V(T)/
+> Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+> ------------------------+--------------------------+---------------+----------
+> age                     | 25.816   28.627    -31.4 |  -3.09  0.002 |  0.50*
+> education               | 10.346   10.605    -10.0 |  -1.09  0.275 |  0.63*
+> black                   | .84324   .84324      0.0 |  -0.00  1.000 |     .
+> hispanic                | .05946   .04865      5.2 |   0.46  0.647 |     .
+> nodegree                | .70811   .56757     30.7 |   2.84  0.005 |     .
+> married                 | .18919   .15676      8.8 |   0.82  0.411 |     .
+> re74                    | 2095.6   1920.3      1.7 |   0.40  0.693 |  1.91*
+> re75                    | 1532.1   1832.1     -3.0 |  -0.81  0.421 |  0.68*
+> ------------------------------------------------------------------------------
+> */
+. 
+. * age and nodegree are not well balanced 
+. * (statisticaly significant difference between treatment and matched comparison)
+. 
+. 
+. ********************************************************************************
+. * Q 6
+. ******
+. 
+. * Propensity score matched treatment effect estimate (ATT)
+. /*---------------------------------------------------
+> ----------------------------------------------------------------------------------------
+>         Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+> ----------------------------+-----------------------------------------------------------
+>             re78  Unmatched |  6349.1435   21553.9209  -15204.7774   1154.61433   -13.17
+>                         ATT |  6349.1435   4584.23534   1764.90816   1902.95748     0.93
+>                         ATU | 21553.9209   6107.88894   -15446.032            .        .
+>                         ATE |                          -14255.7427            .        .
+> ----------------------------+-----------------------------------------------------------
+> 
+> */
+. 
+. 
+. * Experimental treatment effect estimate
+. /* --------------------------------------
+> ------------------------------------------------------------------------------
+>    Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+> ---------+--------------------------------------------------------------------
+>  Control |     260    4554.801    340.0931    5483.836    3885.102    5224.501
+>  Treated |     185    6349.144    578.4229    7867.402    5207.949    7490.338
+> ---------+--------------------------------------------------------------------
+>     diff |           -1794.342    632.8534                -3038.11   -550.5745
+> ------------------------------------------------------------------------------
+> */
+. 
+. 
+. ********************************************************************************
+. * Q 7
+. ******
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+(260 observations deleted)
+
+. 
+. gen re74_sq = re74 ^ 2
+
+. gen re75_sq = re75 ^ 2
+
+. gen age_sq = age ^ 2
+
+. gen educ_nodegree = education*nodegree
+
+. 
+. local spec_7_vars "age age_sq education black hispanic nodegree educ_nodegree married re74 re75 re74_sq re
+> 75_sq"
+
+. 
+. qui logit treat `spec_7_vars'
+
+. 
+. predict p_score
+(option pr assumed; Pr(treat))
+
+. 
+. save "spec_7", replace
+file spec_7.dta saved
+
+. 
+. psgraph, t(treat) p(p_score)
+
+. graph export "plot5.png", replace
+(file plot5.png written in PNG format)
+
+. 
+. 
+. * randomize sort of dataset so ties are matched at random
+. set seed 20161206
+
+. gen u = uniform()
+
+. sort u
+
+. 
+. psmatch2 treat, pscore(p_score) outcome(re78) neighbor(1) ate
+There are observations with identical propensity score values.
+The sort order of the data could affect your results.
+Make sure that the sort order is random before calling psmatch2.
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+            re78  Unmatched |  6349.1435   21553.9209  -15204.7774   1154.61433   -13.17
+                        ATT |  6349.1435   5494.63469    854.50881   1299.69314     0.66
+                        ATU | 21553.9209     6593.604  -14960.3169            .        .
+                        ATE |                          -13866.5813            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     2,490 |     2,490 
+   Treated |       185 |       185 
+-----------+-----------+----------
+     Total |     2,675 |     2,675 
+
+
+. 
+. * Propensity score matched treatment effect estimate
+. /*--------------------------------------------------
+> ----------------------------------------------------------------------------------------
+>         Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+> ----------------------------+-----------------------------------------------------------
+>             re78  Unmatched |  6349.1435   21553.9209  -15204.7774   1154.61433   -13.17
+>                         ATT |  6349.1435   5494.63469    854.50881   1299.69314     0.66
+>                         ATU | 21553.9209     6593.604  -14960.3169            .        .
+>                         ATE |                          -13866.5813            .        .
+> ----------------------------+-----------------------------------------------------------
+> */
+. 
+. 
+. * Experimental treatment effect estimate
+. /* --------------------------------------
+> ------------------------------------------------------------------------------
+>    Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+> ---------+--------------------------------------------------------------------
+>  Control |     260    4554.801    340.0931    5483.836    3885.102    5224.501
+>  Treated |     185    6349.144    578.4229    7867.402    5207.949    7490.338
+> ---------+--------------------------------------------------------------------
+>     diff |           -1794.342    632.8534                -3038.11   -550.5745
+> ------------------------------------------------------------------------------
+> */
+. 
+. 
+. local covariates "age education black hispanic nodegree married re74 re75"
+
+. 
+. pstest `covariates'
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+age                     | 25.816   25.827     -0.1 |  -0.02  0.988 |  1.24
+education               | 10.346   10.184      6.2 |   0.75  0.453 |  0.88
+black                   | .84324   .87027     -6.7 |  -0.74  0.459 |     .
+hispanic                | .05946   .04865      5.2 |   0.46  0.647 |     .
+nodegree                | .70811    .6973      2.4 |   0.23  0.821 |     .
+married                 | .18919   .12432     17.6 |   1.72  0.087 |     .
+re74                    | 2095.6   2397.7     -3.0 |  -0.68  0.495 |  1.94*
+re75                    | 1532.1     2046     -5.2 |  -1.63  0.105 |  1.28
+------------------------------------------------------------------------------
+* if variance ratio outside [0.75; 1.34]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.020     10.25    0.248      5.8       5.2      33.4*    1.26     25
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. /*
+> ------------------------------------------------------------------------------
+>                         |       Mean               |     t-test    |  V(T)/
+> Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+> ------------------------+--------------------------+---------------+----------
+> age                     | 25.816   25.827     -0.1 |  -0.02  0.988 |  1.24
+> education               | 10.346   10.184      6.2 |   0.75  0.453 |  0.88
+> black                   | .84324   .87027     -6.7 |  -0.74  0.459 |     .
+> hispanic                | .05946   .04865      5.2 |   0.46  0.647 |     .
+> nodegree                | .70811    .6973      2.4 |   0.23  0.821 |     .
+> married                 | .18919   .12432     17.6 |   1.72  0.087 |     .
+> re74                    | 2095.6   2397.7     -3.0 |  -0.68  0.495 |  1.94*
+> re75                    | 1532.1     2046     -5.2 |  -1.63  0.105 |  1.28
+> ------------------------------------------------------------------------------
+> */
+. 
+. ********************************************************************************
+. * Q 8
+. ******
+. 
+. use "nsw_dw.dta", clear
+
+. 
+. drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+(260 observations deleted)
+
+. 
+. gen re74_sq = re74 ^ 2
+
+. gen re75_sq = re75 ^ 2
+
+. gen age_sq = age ^ 2
+
+. gen educ_nodegree = education*nodegree
+
+. 
+. local spec_5_vars "education black hispanic married re74 re75 re74_sq re75_sq"
+
+. 
+. qui logit treat `spec_5_vars'
+
+. 
+. predict p_score
+(option pr assumed; Pr(treat))
+
+. 
+. 
+. gen ipw_ate = re78 * ((treat - p_score) / (p_score * (1 - p_score)))
+
+. qui sum ipw_ate
+
+. di r(mean)
+-8780.056
+
+. * -8780.056
+. 
+. gen ipw_att = re78 * ((treat - p_score) / ((1 - p_score)))
+
+. qui sum ipw_att 
+
+. di (1 / (185 / 2675)) * r(mean)
+2167.4583
+
+. * 2167.4583
+. 
+. reg re78 treat `spec_5_vars' [pweight = p_score]
+(sum of wgt is   1.8500e+02)
+
+Linear regression                               Number of obs     =      2,675
+                                                F(9, 2665)        =      46.57
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0929
+                                                Root MSE          =     7741.7
+
+------------------------------------------------------------------------------
+             |               Robust
+        re78 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   2121.507   846.0395     2.51   0.012     462.5471    3780.468
+   education |    568.115    145.498     3.90   0.000     282.8147    853.4154
+       black |   993.0856   905.1299     1.10   0.273    -781.7425    2767.914
+    hispanic |   1896.673   1741.746     1.09   0.276    -1518.638    5311.983
+     married |   598.4607   709.2551     0.84   0.399    -792.2854    1989.207
+        re74 |   .3128831    .138066     2.27   0.024     .0421558    .5836105
+        re75 |   .3623647   .1328118     2.73   0.006     .1019401    .6227893
+     re74_sq |  -3.09e-06   2.13e-06    -1.45   0.147    -7.28e-06    1.09e-06
+     re75_sq |   1.97e-06   1.66e-06     1.19   0.236    -1.28e-06    5.21e-06
+       _cons |  -3433.611    1919.22    -1.79   0.074    -7196.922    329.7005
+------------------------------------------------------------------------------
+
+. 
+. drop p_score ipw_ate ipw_att
+
+. 
+. /*
+> ------------------------------------------------------------------------------
+>              |               Robust
+>         re78 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+> -------------+----------------------------------------------------------------
+>        treat |   431.7796   817.8577     0.53   0.598    -1171.918    2035.477
+> 
+> */
+. 
+. 
+. local spec_7_vars "age age_sq education black hispanic nodegree educ_nodegree married re74 re75 re74_sq re
+> 75_sq"
+
+. 
+. qui logit treat `spec_7_vars'
+
+. 
+. predict p_score
+(option pr assumed; Pr(treat))
+
+. 
+. gen ipw_ate = re78 * ((treat - p_score) / (p_score * (1 - p_score)))
+
+. qui sum ipw_ate
+
+. di r(mean)
+-5543.2366
+
+. * -5543.2366
+. 
+. gen ipw_att = re78 * ((treat - p_score) / ((1 - p_score)))
+
+. qui sum ipw_att 
+
+. di (1 / (185 / 2675)) * r(mean)
+1120.4267
+
+. * 1120.4267
+. 
+. reg re78 treat `spec_7_vars' [pweight = p_score]
+(sum of wgt is   1.8500e+02)
+
+Linear regression                               Number of obs     =      2,675
+                                                F(13, 2661)       =     410.70
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0903
+                                                Root MSE          =     8021.7
+
+-------------------------------------------------------------------------------
+              |               Robust
+         re78 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+--------------+----------------------------------------------------------------
+        treat |   1450.125   930.4046     1.56   0.119    -374.2643    3274.514
+          age |   1099.173   403.6822     2.72   0.007     307.6102    1890.735
+       age_sq |  -17.29797    6.08982    -2.84   0.005    -29.23923   -5.356715
+    education |   856.1265   640.4498     1.34   0.181    -399.7033    2111.956
+        black |   445.0936   1052.676     0.42   0.672    -1619.053     2509.24
+     hispanic |    1820.04   2004.453     0.91   0.364    -2110.402    5750.483
+     nodegree |   7000.468   8354.269     0.84   0.402    -9381.049    23381.99
+educ_nodegree |   -628.519   711.9038    -0.88   0.377     -2024.46    767.4217
+      married |   755.1172   1085.299     0.70   0.487    -1372.997    2883.232
+         re74 |   .2895755   .1985907     1.46   0.145    -.0998321    .6789832
+         re75 |   .2191683   .1986111     1.10   0.270    -.1702794    .6086159
+      re74_sq |  -7.82e-07   1.71e-06    -0.46   0.647    -4.13e-06    2.57e-06
+      re75_sq |   1.08e-06   1.27e-06     0.85   0.396    -1.41e-06    3.57e-06
+        _cons |  -21782.34   9628.027    -2.26   0.024    -40661.51   -2903.168
+-------------------------------------------------------------------------------
+
+. 
+. /*
+> -------------------------------------------------------------------------------
+>               |               Robust
+>          re78 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+> --------------+----------------------------------------------------------------
+>         treat |   1450.125   930.4046     1.56   0.119    -374.2643    3274.514
+> 
+> */
+. 
+. ************************************************************
+. ************************************************************
+. ********************    END PROGRAM    *********************
+. ************************************************************
+. ************************************************************
+. 
+. log close
+      name:  <unnamed>
+       log:  H:\GitHub\aem\ps4\ps4.log
+  log type:  text
+ closed on:  11 Dec 2016, 14:13:48
+------------------------------------------------------------------------------------------------------------

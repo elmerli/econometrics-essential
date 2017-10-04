@@ -1,0 +1,269 @@
+---
+title: 'AEM: PS5'
+author: "Maxwell Austensen"
+date: "December 19, 2016"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(stringr)
+library(lubridate)
+library(haven)
+library(stargazer)
+library(sandwich)
+library(plm)
+library(lmtest)
+
+
+# Modification to stargazer() - escapes "*" to prevent html vs markdown confusion
+stargazer_html <- function(...) {
+  capture.output(stargazer::stargazer(..., type = "html", header = FALSE)) %>%
+  stringr::str_replace_all("\\*", "\\\\*") %>% 
+  paste(collapse = "\n") %>%
+  cat("\n")
+}
+```
+
+
+# Minimum Wage
+
+```{r}
+minwage <- read_stata("http://users.nber.org/~rdehejia/!@$AEM/Problem%20Sets/ps5/DinD_ex.dta")
+
+glimpse(minwage)
+```
+
+## 1
+
+```{r}
+diffs <- 
+  minwage %>% 
+  group_by(nj, after) %>% 
+  summarise(emp_mean = mean(fte)) %>% 
+  spread(after, emp_mean) %>% 
+  mutate(diff = `1` - `0`)
+ 
+diffs$diff[[2]] - diffs$diff[[1]]
+```
+
+
+## 2
+
+```{r}
+# Helper function to fit model and get robust standard errors
+model_prep <- function(df, f, robust = FALSE){
+  mod <- lm(f, data = df)
+  
+  if(robust == TRUE){
+    # Robust stanadard errors (replicating Stat's robust option)
+    robust_se <- 
+      mod %>% 
+      vcovHC(type = "HC1") %>% 
+      diag() %>% 
+      sqrt()
+    
+    return(list(mod, robust_se))
+  } else {
+    return(list(mod))
+  }
+}
+```
+
+
+```{r, results = 'asis'}
+m1 <- minwage %>% model_prep("dfte ~ nj")
+
+stargazer_html(m1[1])
+```
+
+```{r, results = 'asis'}
+m2 <- minwage %>% model_prep("dfte ~ nj", robust = TRUE)
+
+stargazer_html(m2[1], se = m2[2])
+```
+
+<br>
+
+The difference in the standard errors is sizable because there is a considerable amount of heteroskedasticity to adjust for in the outcome variable `dfte`.
+
+```{r, message=FALSE, warning=FALSE}
+minwage %>% 
+  ggplot(aes(factor(nj), dfte)) +
+  geom_violin(adjust = .5, draw_quantiles = c(0.25, 0.5, 0.75)) +
+  scale_x_discrete(labels = c("Pennsylvania", "New Jersey")) +
+  labs(x ="")
+```
+
+
+## 3
+
+```{r, results = 'asis'}
+m3 <- minwage %>% model_prep("fte ~ nj + after + njafter")
+
+stargazer_html(m3[1])
+```
+
+```{r, results = 'asis'}
+m4 <- minwage %>% model_prep("fte ~ nj + after + njafter", robust = TRUE)
+
+stargazer_html(m4[1], se = m4[2])
+```
+
+<br>
+
+The coefficient of interest in these models is the interaction term `njafter` for NJ (treatment) and after (post-intervention), which takes the value `r m3[[1]]$coefficients[[4]]`. The robust standard errors are considerably larger, but in both cases this interaction term is not statistically significant at the 10% level.
+
+## 4
+
+```{r, results = 'asis'}
+m5 <- plm(fte ~ nj + after + njafter, data = minwage, model = "pooling", index = c("sheet"))
+
+# calculate small sample size adjustment
+G <- length(unique(minwage$sheet))
+N <- length(minwage$sheet)
+dfa <- (G/(G - 1)) * (N - 1)/m5$df.residual
+
+# use coeftest and the vcovHC functions, specifying HC0 type and identifying cluster as 'group'
+m5_clus <- coeftest(m5, vcov = function(x) dfa * vcovHC(x, cluster="group", type="HC0"))
+
+stargazer_html(m5_clus, dep.var.labels = "fte")
+```
+
+<br>
+
+When clustering the standard errors by restaurant they become much larger. They are not as large as the heteroskedasticity robust standard errors from the earlier model for the `after` and `njafter` terms, but as large for `nj`.
+
+## 5
+
+```{r, results = 'asis'}
+m6 <- plm(fte ~ nj + after + njafter, data = minwage, model = "within", index = c("sheet"))
+
+stargazer_html(m6)
+```
+
+<br>
+
+When using restaurant fixed effects the `nj` term drops out because the state that a restaurant is in is invariant within restaurants over time. 
+
+## 6
+
+<br>
+
+The estimated impact of the minimum wage is the same in all these models because they are all essentially doing the same thing, taking the difference in differences, in different ways. The first models take the within group time differences in the outcome variable, and then include the group differences in the treatment term. The second set of models includes both the time and group terms and gets the difference with the interaction term. 
+
+
+## 7
+
+<br>
+![](Card_Krueger.png)
+<br>
+
+This figure shows that conclusions they reach in their paper are not dependent on the timing of their post period survey - the trends are fairly consistent after their surveys when looking at these different BLS data.
+
+
+***
+***
+
+# MicroFinance
+
+```{r}
+safesave <- read_stata("http://users.nber.org/~rdehejia/!@$AEM/Problem%20Sets/ps5/safesave_slim_data.dta")
+
+glimpse(safesave)
+```
+
+```{r}
+post_start <- as_date("2000-02-01")
+
+plot_data <-
+  safesave %>% 
+  mutate(year = monthyear %>% str_sub(1, 4) %>% as.numeric,
+         month = monthyear %>% str_sub(5, 6) %>% as.numeric,
+         date = make_date(year, month),
+         treatment = recode(TIKA, `1` = "Tikapara and Kalyanpur \n(Treatment)\n",
+                                  `0` = "Geneva \n(Comparison)\n"),
+         post = if_else(date >= post_start, 1, 0),
+         treat_and_post = str_c(treatment, post),
+         days = date - min(date)) %>% 
+  group_by(TIKA, treatment, date, days, post, treat_and_post) %>% 
+  summarise(loan_balance = mean(loanbal),
+            nage = mean(nage),
+            tinpr = mean(tinpr)) %>% 
+  ungroup()
+```
+
+```{r}
+start_date <- min(plot_data$date)
+end_date <- max(plot_data$date)
+
+base_plot <- 
+  plot_data %>% 
+  ggplot(aes(date, loan_balance, group = treatment, color = treatment)) +
+  geom_vline(xintercept = as.numeric(post_start)) +
+  scale_y_continuous(labels = scales::dollar) +
+  scale_x_date(breaks = c(start_date, post_start, end_date), date_labels = "%Y %b") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  theme_minimal() +
+  labs(title = "Average Loan Balances by Branch Groups",
+       subtitle = "February 2000 interest rates were raised for Tikapara and Kalyanpur",
+       color = "", 
+       x = "", 
+       y = "Average Loan Balance")
+```
+
+## 8
+
+```{r}
+base_plot + geom_line(size = 1)
+```
+<br>
+
+Eyeballing the figure, the pre-treatment tends look roughly parallel.
+
+```{r}
+base_plot + 
+  geom_smooth(aes(date, loan_balance, group = treat_and_post, color = treatment), 
+              method = "lm", formula = y ~ x, size = 1) +
+  geom_point(alpha = 0.5)
+```
+
+
+```{r, results = 'asis'}
+plot_data %>% 
+  filter(post == 0) %>% 
+  with(lm(loan_balance ~ days + TIKA + days*TIKA)) %>% 
+  stargazer_html()
+```
+<br>
+
+In the regression, the fact that the interaction term of the time trend and treatment `days:TIKA` is not statistically significant indicates that the treatment and comparison groups do not have significantly different pre-treatment time trends.
+
+```{r, results = 'asis'}
+plot_data %>% 
+  filter(TIKA == 0) %>% 
+  with(lm(loan_balance ~ days + post + days*post)) %>% 
+  stargazer_html()
+```
+<br>
+
+Within the comparison branches there is no statistically significant change in the slope after the intervention (because the coefficient on the `days:post` interaction term is not significant), and neither does the intercept change significantly (because the `post` coefficient is also not significant).
+
+```{r, results = 'asis'}
+plot_data %>% 
+  filter(post == 0) %>% 
+  with(lm(loan_balance ~ days + TIKA + days*TIKA + nage + tinpr)) %>% 
+  stargazer_html()
+```
+<br>
+
+It is not a problem for the validity of the identification strategy that the treatment and comparison groups have different pre-treatment levels, because by taking the difference in differences this is netted out. The issue would arise id the pre-treatment slopes where different. Also, the differences in pre-treatment levels is no longer statistically significant when controlling for the average age or borrowers and average length of time the borrower has been with the bank, as indicated by the not significant `TIKA` term in the above model.
+
+
+
+

@@ -1,0 +1,77 @@
+---
+title: '2: Table 1 - Descriptives'
+author: "Maxwell Austensen"
+date: '`r Sys.Date()`'
+output:
+  github_document: default
+  html_notebook: default
+subtitle: AEM Replication
+---
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+# Install packages if needed
+package_list <- c("haven", "stringr", "tidyverse", "janitor", "feather", "knitr", "rmarkdown")
+new_packages <- package_list[!package_list %in% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+
+library(haven)
+library(stringr)
+library(tidyverse)
+library(janitor)
+library(feather)
+
+# Set directories
+clean_ <- "/Users/Maxwell/Box Sync/aem/replication/data/clean/"
+```
+
+```{r}
+load_sample <- function(n){
+  read_feather(str_interp("${clean_}sample${n}.feather")) %>% mutate(sample = str_c("sample", n))
+}
+```
+
+```{r}
+all_samples <- c(1, 2, 3) %>% map(load_sample)
+```
+
+```{r, message=FALSE, warning=FALSE}
+order_vec <- c("marriage_ended_mean", "marriage_ended_sd", "age_married_mean", "age_married_sd", "firstborn_girl_mean", 
+               "firstborn_girl_sd", "n_children_mean", "n_children_sd", "age_birth_mean", "age_birth_sd", "age_mean", 
+               "age_sd", "educ_yrs_mean", "educ_yrs_sd", "urban_mean", "urban_sd", "hh_income_std_mean", 
+               "hh_income_std_sd", "poverty_status_mean", "poverty_status_sd", "nonwoman_inc_mean", 
+               "nonwoman_inc_sd", "woman_inc_mean", "woman_inc_sd", "woman_earn_mean", "woman_earn_sd")
+
+table_top <-
+  all_samples %>% 
+  bind_rows() %>% 
+  group_by(sample) %>% 
+  select(marriage_ended, age_married, firstborn_girl, n_children, age_birth, age, educ_yrs, urban, 
+         hh_income_std, poverty_status, nonwoman_inc, woman_inc, woman_earn) %>% 
+  summarise_all(funs(mean, sd)) %>%
+  gather("variable", "value", -sample) %>% 
+  spread(sample, value) %>% 
+  mutate(variable = ordered(variable, levels = order_vec)) %>% 
+  arrange(variable)
+```
+
+```{r}
+obs_row <- data_frame(variable = "Sample Size",
+                      sample1 = nrow(all_samples[[1]]),
+                      sample2 = nrow(all_samples[[2]]),
+                      sample3 = nrow(all_samples[[3]]))
+```
+
+```{r, message=FALSE, warning=FALSE, results='asis'}
+table1 <-  
+  table_top %>% 
+  bind_rows(obs_row) %>% 
+  rename(`Ever-Married with Children` = sample1,
+         `All Children Live in Household` = sample2,
+         `1st Child Born Within 5 Years of 1st Marriage` = sample3)
+
+write_feather(table1, str_c(clean_, "/tables/table1.feather"))
+
+title <- "Table 1: Descriptive Statistics"
+knitr::kable(table1, digits = 2, format.args = list(big.mark = ','), format = "pandoc", caption = title)
+```
+
