@@ -1,303 +1,225 @@
-capture log close
-log using "sample_matching", text replace
-/****************************************************************************
-Program Name:   sample_matching.do
-Author:         Zongyang Li
-Date Created:   06 Dec 2016
-Project:        Propensity Score Matching
-****************************************************************************/
+******************************************************************************
+******************************************************************************
+*****
+*****     AEM PS 4
+*****
+******************************************************************************
+******************************************************************************
+
+
+*******************
+*  Startup
+*******************
 
 clear all
-clear matrix
-macro drop _all
-set more off, perm
-set maxvar 10000
+set more off
+cd "/Users/zongyangli/Google Drive/Wagner/第三学期/Advan Empirical Method/Problem Sets/PS4"
+use "nsw_dw.dta", clear
 
-cd "C:/Users/zongyangli/aem/sample_matching"
+** 1
+ * sum statistics 
+keep if data_id == "Dehejia-Wahba Sample" & treat == 1
+outreg2 using sum1.xls, replace sum(log) eqkeep(N mean sd)
 
-* ssc install nnmatch
-* ssc install psmatch2
-* ssc install teffects
+use nsw_dw, clear
+keep if data_id == "Dehejia-Wahba Sample" & treat == 0
+outreg2 using sum1.xls, append sum(log) eqkeep(N mean sd)
 
-********************************************************************************
-* Create Summary Statistics Table, Do t-test
-*****
+use nsw_dw, clear
+drop if data_id == "Dehejia-Wahba Sample" 
+outreg2 using sum1.xls, append sum(log) eqkeep(N mean sd)
 
-qui{
-	capture program drop make_table
-	program define make_table
-		syntax varlist(numeric)
-		
-			matrix table1 = J(4, 8, .)
-			matrix colnames table1 = `varlist'
-			matrix rownames table1 = trt_mean comp_mean diff_mean diff_se
+ * test mean differences
+use nsw_dw, clear
+keep if data_id == "Dehejia-Wahba Sample" 
+save exp_var
 
-			local i = 1
-			foreach var in `varlist' {
-
-				qui ttest `var', by(treat)
-				
-				matrix table1[1, `i'] = round(r(mu_2), 0.01)
-				matrix table1[2, `i'] = round(r(mu_1), 0.01)
-				matrix table1[3, `i'] = round(r(mu_1)-r(mu_2), 0.01)
-				matrix table1[4, `i'] = round(r(se), 0.01)
-				
-				local i = `i'+1
-			}
-
-			matrix list table1
-	end
+ * need to use ttest to test all the variables.
+use exp_var, clear
+foreach var of varlist age education black hispanic married nodegree re74 re75 re78 {
+di "`var'"
+ttest `var', by(treat)
 }
 
-
-use "nsw_dw.dta", clear
-
-keep if data_id == "Dehejia-Wahba Sample"
-
-make_table age education black hispanic nodegree married re74 re75
-
-/*
-                 age  education      black   hispanic   nodegree    married       re74       re75
- trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
-comp_mean      25.05      10.09        .83        .11        .83        .15    2107.03    1266.91
-diff_mean       -.76       -.26       -.02        .05        .13       -.04      11.45    -265.15
-  diff_se        .68        .17        .04        .03        .04        .04     516.48     303.16
-*/
-
-use "nsw_dw.dta", clear
-
+use nsw_dw, clear
 drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+save nonexp_var 
 
-make_table age education black hispanic nodegree married re74 re75
-
-/*
-                 age  education      black   hispanic   nodegree    married       re74       re75
- trt_mean      25.82      10.35        .84        .06        .71        .19    2095.57    1532.06
-comp_mean      34.85      12.12        .25        .03        .31        .87   19428.75   19063.34
-diff_mean       9.03       1.77       -.59       -.03        -.4        .68   17333.17   17531.28
-  diff_se        .78        .23        .03        .01        .04        .03     990.69    1001.91
-*/
-
-
-********************************************************************************
-* Direct Matching with Graph showing Matching Results
-******
-
-
-use "nsw_dw.dta", clear
-
-drop if data_id == "Dehejia-Wahba Sample" & treat == 0
-
-* Prep data sets for mergin back in after matching procedure
-* create id and index vars to match on
-gen id = _n
-gen index = _n
-
-* rename variables to accomdate wide format created by matching
-preserve
-rename * *_1m
-rename id_1m id
-save "treat", replace
-restore
-
-preserve
-rename * *_0m
-rename index_0m index
-save "comparison", replace
-restore
-
-
-nnmatch re78 treat re74 re75, keep(match_info) replace
-
-/*
-----------+----------------------------------------------------------------
-     re78 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
-----------+----------------------------------------------------------------
-     SATE |  -10475.37   3936.875    -2.66   0.008     -18191.5   -2759.233
-----------+----------------------------------------------------------------
-*/
-
-
-
-use "match_info", clear
-
-keep if treat == 1
-
-* merge back in other covariates dropped in matching process
-merge m:1 id using "treat", ///
-	keepusing(age_1m education_1m black_1m hispanic_1m married_1m nodegree_1m) ///
-	keep(master match) nogen
-
-merge m:1 index using "comparison", ///
-	keepusing(age_0m education_0m black_0m hispanic_0m married_0m nodegree_0m) ///
-	keep(master match) nogen
-
-* get one row per observation (from tie matches)
-collapse (mean) re74_* re75_* education_* index, by(id)
-
-* check quality of matching for re74
-twoway (scatter re74_0m re74_1m) (lfit re74_0m re74_1m) || ///
-	function y = x, ra(re74_0m) clpat(dash)
-graph export "plot1.png", replace
-
-reg re74_0m re74_1m
-	* R-squared     =  0.9977
-
-* check quality of matching for re74
-twoway (scatter re75_0m re75_1m) (lfit re75_0m re75_1m)  || ///
-	function y = x, ra(re75_0m) clpat(dash)
-graph export "plot2.png", replace
-
-reg re75_0m re75_1m
-	* R-squared     =  0.9929
-
-	
-********************************************************************************
-* Check Matching Balance with Graph
-******
-
-* check balance of education treatment and matched comparison
-twoway (scatter education_0m education_1m) (lfit education_0m education_1m) || ///
-	function y = x, ra(education_0m) clpat(dash)
-graph export "plot3.png", replace
-
-ttest education_1m ==  education_0m
-	* mean(diff) -.9477146   (se) .2238233
-
-
-********************************************************************************
-* Propensity Score Matching with Graph
-*******
-
-use "nsw_dw.dta", clear
-
-drop if data_id == "Dehejia-Wahba Sample" & treat == 0
-
-gen re74_sq = re74 ^ 2
-gen re75_sq = re75 ^ 2
-
-local covariates "education black hispanic married re74 re75 re74_sq re75_sq"
-
-nnmatch re78 treat `covariates', keep(match_info2) replace
-
-*        re78 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
-*-------------+----------------------------------------------------------------
-*        SATE |  -11653.45   3990.061    -2.92   0.003    -19473.83   -3833.078
-
-
-use "match_info2", clear
-
-keep if treat == 1
-
-* merge back in other covariates dropped in matching process
-merge m:1 id using "treat", keepusing(age nodegree_1m) keep(master match) nogen
-
-merge m:1 index using "comparison", keepusing(age nodegree_0m) keep(master match) nogen
-
-drop re74 re75 re74_sq re75_sq
-local collapse_vars = "treat re78_* age_* education_* black_* hispanic_* nodegree_* married_* re74_* re75_* km index dist"
-
-collapse (mean) `collapse_vars', by(id) 
-
-local vars "age education black hispanic nodegree married re74 re75"
-
-matrix table1 = J(3, 8, .)
-matrix colnames table1 = `vars'
-matrix rownames table1 = trt_mean comp_mean diff_se
-
-matrix list table1 
-
-local i = 1
-foreach var in `vars' {
-
-	qui ttest `var'_0m == `var'_1m
-	
-	matrix table1[1, `i'] = round(r(mu_2), 0.01)
-	matrix table1[2, `i'] = round(r(mu_1), 0.01)
-	matrix table1[3, `i'] = round(r(se), 0.01)
-	
-	local i = `i'+1
+use nonexp_var, clear
+foreach var of varlist age education black hispanic married nodegree re74 re75 re78 {
+di "`var'"
+ttest `var', by(treat)
 }
 
-* Assess the quality of the matches for each covariate
-matrix list table1
+* Other method: used an ID to indicate the exact situation
+** 2
 
-*              age  education  black  hispanic  nodegree  married     re74     re75
-* trt_mean   25.82      10.35    .84       .06       .71      .19  2095.57  1532.06
-*comp_mean   29.34       10.3    .84       .06       .71      .19  2521.42  1712.76
-*  diff_se     .82        .03      0         0         0        0   113.68   114.88
+use nonexp_var, clear
+nnmatch re78 treat re74 re75 ,pop m(1) keep(mt_74_psid) tc(att) replace
 
-ttest re78_1 == re78_0
+use exp_var, clear
+nnmatch re78 treat re74 re75 ,pop m(1) keep(mt_74) tc(att) replace
 
-*        |      Mean  Std. Err. 
-* re78_1 |  6349.144   578.4229   
-* re78_0 |  4951.368    557.107   
-*--------+----------------------
-*  diff  | 1397.775     777.192
+* graph for nonexp_var
+use mt_74_psid, clear
+keep if treat==1
+collapse treat re78 re74 re75 km km_prime index dist re78_0 re78_1 re74_0m re75_0m re74_1m re75_1m, by(id)
 
-* Ha: mean(diff) != 0  
-* Pr(|T| > |t|) = 0.0737 
+twoway (scatter re74_1m id, ms(O) mc(red) msize(small)) 
+(scatter re74_0m id, ms(O) mc(blue) msize(small))
+graph export "test.png", replace
+twoway (scatter re74_1m re74_0m, ms(O) mc(red) msize(small))
+
+twoway (scatter re75_1m id, ms(O) mc(red) msize(small)) (scatter re75_0m id, ms(O) mc(blue) msize(small))
+twoway (scatter re75_1m re75_0m, ms(O) mc(red) msize(small))
+
+* graph for exp_var
+use mt_74, clear
+keep if treat==1
+collapse treat re78 re74 re75 km km_prime index dist re78_0 re78_1 re74_0m re75_0m re74_1m re75_1m, by(id)
+
+twoway (scatter re74_1m id, ms(O) mc(red) msize(small)) (scatter re74_0m id, ms(O) mc(blue) msize(small))
+twoway (scatter re74_1m re74_0m, ms(O) mc(red) msize(small))
+
+twoway (scatter re75_1m id, ms(O) mc(red) msize(small)) (scatter re75_0m id, ms(O) mc(blue) msize(small))
+twoway (scatter re75_1m re75_0m, ms(O) mc(red) msize(small))
 
 
+* twoway (scatter re78_1 id, ms(O) mc(red) msize(small)) (scatter re78_0 id, ms(O) mc(blue) msize(small))
 
-use "nsw_dw.dta", clear
-keep if data_id == "Dehejia-Wahba Sample"
+** 3
+
+use nsw_dw, clear
+capture gen ndex = _n
+capture gen id = _n
+save nsw_dw, replace
+
+use mt_74_psid, clear
+keep if treat==1
+* collapse id treat re78 re74 re75 km km_prime dist re78_0 re78_1 re74_0m re75_0m re74_1m re75_1m, by(index)
+merge m:1 index using nsw_dw, keepusing(education)
+drop if _merge != 3
+drop _merge
+rename education education_control
+
+merge m:1 id using nsw_dw, keepusing(education)
+drop if _merge != 3
+drop _merge
+rename education education_treatment
+
+collapse index education_treatment education_control treat re78 re74 re75 km km_prime dist re78_0 re78_1 re74_0m re75_0m re74_1m re75_1m, by(id)
+save mt_74_psid_education
+
+twoway (scatter education_control id, ms(O) mc(red) msize(small)) (scatter education_treatment id, ms(O) mc(blue) msize(small))
+twoway (scatter education_treatment education_control, ms(O) mc(red) msize(small)) 
+
+sum education_control
+sum education_treatment
+ttest education_control == education_treatment
+
+
+** 4
+use nonexp_var, clear
+capture gen re74_2 = re74*re74
+capture gen re75_2 = re75*re75
+save nonexp_var, replace
+
+nnmatch re78 treat re74 re75 education black hispanic married re74_2 re75_2, pop m(1) keep(mt_nonex_78_all) tc(att) replace
+use mt_nonex_78_all, clear
+collapse treat re78 re74 re75 education black hispanic married re74_2 re75_2 km km_prime index dist re78_0 re78_1 re74_0m re75_0m education_0m black_0m hispanic_0m married_0m re74_2_0m re75_2_0m re74_1m re75_1m education_1m black_1m hispanic_1m married_1m re74_2_1m re75_2_1m, by(id)
+keep if treat==1
+
+ttest re74_0m == re74_1m 
+ttest re75_0m == re75_1m 
+ttest education_0m == education_1m 
+ttest black_0m == black_1m 
+ttest hispanic_0m == hispanic_1m 
+ttest married_0m == married_1m 
+ttest re74_2_0m == re74_2_1m 
+ttest re75_2_0m == re75_2_1m
+
+use exp_var, clear
+capture gen re74_2 = re74*re74
+capture gen re75_2 = re74*re74
+save exp_var, replace
+
+nnmatch re78 treat re74 re75 education black hispanic married re74_2 re75_2, pop m(1) keep(mt_ex_78_all) tc(att) replace
+
+** 5
+use nonexp_var, clear
+psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) logit ate neighbor(1)
+pstest age education black hispanic married nodegree re74 re75 re74_2 re75_2, t(treat) mw(_weight) graph
+psgraph
+
+** 6
+use exp_var, clear
+gen age_2 = age*age
+save exp_var, replace
+
+psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) logit ate neighbor(1)
+
+* baseline experimental treatment effect:
+reg re78 treat age age_2 education nodegree black hispanic re74 re75, robust
 ttest re78, by(treat) 
 
-* Experimental treatment effect estimate
-/* --------------------------------------
-------------------------------------------------------------------------------
-   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
----------+--------------------------------------------------------------------
- Control |     260    4554.801    340.0931    5483.836    3885.102    5224.501
- Treated |     185    6349.144    578.4229    7867.402    5207.949    7490.338
----------+--------------------------------------------------------------------
-    diff |           -1794.342    632.8534                -3038.11   -550.5745
-------------------------------------------------------------------------------
+** 7
+use nonexp_var, clear
+gen age_2 = age*age
+gen re74_3 = re74^3
+gen edu_2 = education*education
+gen age_3 = age^3
+gen nodg_black = nodegree*black
+gen nodg_mar = nodegree*married
+gen nodg_age = nodegree*age
 
- Ha: diff != 0 
- Pr(|T| > |t|) = 0.0048 
- 
-*/
- 
-********************************************************************************
-* Test Matching Validity
-******
+gen re74_nodg = re74*nodegree
+gen re75_nodg = re74*nodegree
+gen re74_black = re74*black
+gen re74_edu = re74*education
+gen re74_mar = re74*married
+gen re75_black = re75*black
+gen re75_edu = re75*education
+gen re75_mar = re75*married
+gen edu_mar = education*married
+gen black_education = black*education
+gen black_mar = black*married
 
-use "nsw_dw.dta", clear
+gen re74_hispanic = re74*hispanic
+gen re75_hispanic = re75*hispanic
 
-drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+save nonexp_var, replace
 
-gen re74_sq = re74 ^ 2
-gen re75_sq = re75 ^ 2
+psmatch2 treat age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 age_3, out(re78) logit ate neighbor(1)
 
-local spec_5_vars "education black hispanic married re74 re75 re74_sq re75_sq"
+* psmatch2 treat age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 nodg_black, out(re78) logit ate neighbor(1)
+* psmatch2 treat age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 re74_nodg, out(re78) logit ate neighbor(1)
+* psmatch2 treat age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 re74_nodg re74_mar re75_mar edu_mar re74_black age_3, out (re78) logit ate neighbor(1)
+* psmatch2 treat age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 nodg_age, out (re78) logit ate neighbor(1)
 
-qui logit treat `spec_5_vars'
+pstest age education black hispanic married nodegree re74 re75 re74_2 re75_2, t(treat) mw(_weight) graph
+pstest age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 age_3, t(treat) mw(_weight) graph
+psgraph
 
-predict p_score
 
-save "spec_5", replace
+** 8 
+use nonexp_var, clear
+ * use Q5 specification
+logit treat education married black hispanic re74 re75 re74_2 re75_2
+predict ps_score_q5
 
-psgraph, t(treat) p(p_score)
-graph export "plot4.png", replace
+/*gen inver_ps_q5 = ((treat-ps_score_q5)/(ps_score_q5*(1-ps_score_q5))) gen ate_inver_ps_q5 = re78*inver_ps_q5 sum ate_inver_ps_q5*/
 
-* randomize sort of dataset so ties are matched at random
-set seed 20161206
-gen u = uniform()
-sort u
+egen pr_t = mean(treat)
+gen effect_inver_ps_q5 = (1/pr_t)*re78*((treat-ps_score_q5)/(1-ps_score_q5))
+sum effect_inver_ps_q5
 
-psmatch2 treat, pscore(p_score) outcome(re78) neighbor(1) ate
+ * use Q7 specification
 
-local covariates "age education black hispanic nodegree married re74 re75"
+logit treat age age_2 education edu_2 married nodegree black hispanic re74 re75 re74_2 re75_2 re74_3 age_3
+predict ps_score_q7
 
-pstest `covariates'
+/*gen inver_ps_q7 = ((treat-ps_score_q7)/(ps_score_q7*(1-ps_score_q7))) gen ate_inver_ps_q7 = re78*inver_ps_q7 sum ate_inver_ps_q7*/
 
-************************************************************
-************************************************************
-********************    END PROGRAM    *********************
-************************************************************
-************************************************************
-
-log close
-
+egen pr_t_2 = mean(treat)
+gen effect_inver_ps_q7 = (1/pr_t_2)*re78*((treat-ps_score_q7)/(1-ps_score_q7))
+sum effect_inver_ps_q7
