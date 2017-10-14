@@ -1,0 +1,341 @@
+---
+title: "AEM: Problem Set 1"
+author: "Maxwell Austensen"
+date: "September 24, 2016"
+output: 
+  pdf_document:
+    highlight: tango
+---
+
+```{r chuck-opts, include=FALSE}
+# output_type <- "html" # for Starazer output
+output_type <- "latex" # for Starazer output
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+```{r setup}
+# Utility functions -------------------------------------------------------
+
+`%S%` <- function(x, y) {
+  paste0(x, y)
+}
+
+`%notin%` <- Negate(`%in%`)
+
+################################################################################
+
+# Install packages if needed
+package_list <- c("stargazer", "knitr", "haven", "labelled", "ICC", "scales", "tidyverse")
+new_packages <- package_list[package_list %notin% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+
+library(stargazer)
+library(knitr)
+library(haven)
+library(labelled)
+library(ICC)
+library(scales)
+library(tidyverse)
+
+# Set directories
+ps1_ <- "/Users/zongyangli/Google Drive/Wagner/Semester 3/Advan Empirical Method/Problem Sets/PS1/"
+
+################################################################################
+```
+
+
+
+
+```{r load-data}
+# Load data
+data_raw <- 
+  read_stata(ps1_ %S% "Thornton HIV Testing Data.dta") %>% 
+  remove_val_labels
+
+names(data_raw) <- names(data_raw) %>% tolower
+
+# Contruct main sample for analysis
+main_sample <-
+  data_raw %>% 
+  filter(
+    hiv2004 %notin% c(NA, -1),
+    !is.na(any),
+    !is.na(zone),
+    !is.na(age)
+  )
+```
+
+\clearpage
+
+## Part I: Summary Statistics
+
+```{r}
+get_summary <- function(data){
+  data %>% 
+    summarise(
+      `Average Age` = mean(age, na.rm=T),
+      `Percentage of Males` = mean(male, na.rm=T)*100,
+      `Average Years of Education` = mean(educ2004, na.rm=T),
+      `Percentage with HIV` = mean(hiv2004, na.rm=T)*100
+    ) %>% 
+    kable(digits = 1)
+}
+```
+
+### 1. 
+```{r}
+main_sample %>% get_summary
+```
+
+The average age in the sample is 33.4 years old, the sample is 46.3% males, and 6.3 percent of people in the sample are infected with HIV.
+
+***
+
+### 2.
+```{r}
+main_sample %>% group_by(any) %>% get_summary
+main_sample %>% group_by(under) %>% get_summary
+```
+
+There are no major differences in the variables between treatment and control groups based on either cash receipt or distance. However, those that received some cash were on average about a year older and those that were under 1.5Km from the center had an HIV rate three percentage points high than those further away.
+
+***
+
+### 3.
+```{r results = "asis"}
+grps <- c("any", "under")
+vars <- c("age", "male", "hiv2004")
+
+ttest_results <- 
+  data.frame(
+    var = character(), 
+    P.value = double(), 
+    stringsAsFactors=FALSE
+  )
+
+for(grp in grps) {
+  i <- 1
+  for(var in vars){
+    result <- t.test(main_sample[[var]] ~ main_sample[[grp]], var.equal = TRUE)$p.value
+    
+    ttest_results[i,1] <- var
+    ttest_results[i,2] <- result
+    i <- i+1
+  }
+  writeLines("#### t-test: group = " %S% grp)
+  print(kable(ttest_results, digits = 3))
+  writeLines("\n\n\n")
+}
+```
+
+Those in the sample that received any cash were older than those that did not receive any cash, and this difference is significant at the 1% level. Also, Those in the sample that were less than 1.5Km from the center were more likely to be infected with HIV than those further from the centers, and this difference was also significant at the 1% level.
+
+***
+
+\clearpage
+
+## Part II: Analysis using graphs
+
+### 4.
+```{r}
+main_sample %>% 
+  group_by(any) %>% 
+  summarise(
+    got_mean = mean(got, na.rm=T),
+    got_se = sd(got)/sqrt(n())
+  ) %>% 
+  ggplot(aes(any, got_mean)) +
+  geom_bar(stat = "identity", fill = "#E69F00") +
+  geom_errorbar(aes(ymin = got_mean - got_se, ymax = got_mean + got_se), width = 0, size = 1) +
+  geom_text(aes(y = got_mean+0.05, label = round(got_mean*100, 1) %S% "%")) +
+  scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = c(0,1), labels = c("No Incentive", "Some Incentive")) +
+  ylab("Percentage learning HIV results") + xlab("") +
+  ggtitle("Effects of receiving some incentive")
+```
+
+
+***
+
+### 5.
+```{r}
+main_sample %>% 
+  group_by(ti) %>% 
+  summarise(
+    got_mean = mean(got, na.rm=T),
+    got_se = sd(got)/sqrt(n())
+  ) %>% 
+  ggplot(aes(ti, got_mean)) +
+  geom_bar(stat = "identity", fill = "#E69F00") +
+  geom_errorbar(aes(ymin = got_mean - got_se, ymax = got_mean + got_se), width = 0, size = 1) +
+  geom_text(aes(y = got_mean+0.05, label = round(got_mean*100, 1) %S% "%")) +
+  scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = c(0,50, 100, 200, 300), labels = c("$0", "$0.50", "$1.00", "$2.00", "$3.00")) +
+  ylab("Percentage learning HIV results") + xlab("") +
+  ggtitle("Effects of the total amount of the incentive")
+```
+
+***
+\newpage
+
+## Part III: Analysis using linear regression
+
+### 6.
+```{r results = "asis"}
+
+any_1 <- lm(got ~ any, data = main_sample)
+any_2 <- lm(got ~ any + age + male + educ2004 + mar, data = main_sample)
+
+stargazer(any_1, any_2, type = output_type, header = FALSE)
+```
+
+The estimate for b is 0.449, and it is statistically significant at the 1% level. When additional controls are included the estimate is virtually unchanged at 0.450, and remains significant at the 1% level. This suggests that the randomization was successful in balancing the treatment and control groups, and suggests that there is no covert or overt bias in the treatment effect estimate.
+
+\clearpage
+
+### 7.
+```{r}
+results <- t.test(main_sample$got ~ main_sample$any, var.equal=TRUE, paired=FALSE)
+
+results$p.value
+
+results$estimate[[2]] - results$estimate[[1]]
+```
+
+Using a group means comparison, the estimated treatment effect is 0.449, and is statistically significant at the 1% level. This answer does not differ significantly from the OLS coefficient estimate on treatment. Since the estimate using regressions with control variables included does not significantly alter the treatment effect estimate from a simple mean difference, this suggests that the randomization of treatment was successful in balancing the two groups with respect to these other variables.
+
+***
+
+\clearpage
+
+### 8.
+```{r results = "asis"}
+ti_1 <- lm(got ~ tinc, data = main_sample)
+ti_2 <- lm(got ~ tinc + age + male + educ2004 + mar, data = main_sample)
+
+stargazer(ti_1, ti_2, type = output_type, header = FALSE)
+```
+
+The estimate of the treatment effect is 0.002, meaning that, on average, an additional 100 kwacha in cash incentive is associated with a 2% increase in the likelihood of getting the test results. The addition of control variables does not effect the estimate of the treatment effect at all.
+
+***
+
+### 9.
+
+Receiving any cash incentive increases the likelihood of the recipient getting their HIV test results by 50%. This is quite a large effect. Doubling the cash incentive from 100 to 200 kwacha has a relatively small effect compared to that from moving from no incentive to just 50 kwacha.
+
+***
+
+\newpage
+## Part IV: Conditional (Heterogeneous) Treatment Effects
+
+### 10.
+```{r results = "asis"}
+any_male <- lm(got ~ any + male + any*male, data = main_sample)
+
+stargazer(any_male, type = output_type, header = FALSE)
+```
+
+The estimate for the treatment-male interaction term is `r round(any_male$coefficients[["male"]], 3)`, and it is not statistically significant at the 10% level. This suggests that there is not a differential effect of receiving any cash incentive for men and women. The estimate would be interpreted as meaning that men who receive any cash incentive are 0.6% less likely to get their results than are women who receive any cash incentive. The interpretation of the coefficient for the interaction `male*any` is different than for `male` because the interaction must be interpreted in combination with the coefficients on its constituent parts.
+
+***
+
+\clearpage
+
+### 11.
+```{r results = "asis"}
+any_educ <- lm(got ~ any + educ2004 + any*educ2004, data = main_sample)
+
+stargazer(any_educ, type = output_type, header = FALSE)
+```
+
+The estimate of the coefficient on the interaction `any*educ2004` is 0.001, and it is not statistically significant. The interaction suggests that for those who receive any cash incentive, each additional year of education is associated with being 0.99% less likely to get the test results.
+
+***
+
+## Part V: Policy Implications
+
+### 12.
+
+Based on the findings in Part III, if the goal of the government were to increase the number of people who know their HIV status, they should pursue a policy of granting some amount of cash incentive. Assuming that the cost of administering an additional test is significantly more than $2.00, the cash incentives offered should be $2.00.
+
+***
+
+### 13.
+
+Given that results of Part IV show that there are no significant differential effects for the cash incentives on the likelihood of getting the results, there should not be any targeting of certain groups for the incentives. 
+
+***
+
+## Part VI: A Random Sub-Sample
+
+### 14.
+```{r}
+set.seed(19920428)
+sample_1000 <- main_sample %>% sample_n(1000)
+```
+
+### 15.
+```{r results = "asis"}
+any_1 <- lm(got ~ any, data = sample_1000)
+any_2 <- lm(got ~ any + age + male + educ2004 + mar, data = sample_1000)
+
+stargazer(any_1, any_2, type = output_type, header = FALSE)
+```
+
+The estimate of the coefficient on treatment is slightly different in this random sub sample. However, it is quite close to the previous estimate. It is different because of random variation from the sampling mean.
+
+***
+
+## Part VII: Choosing Sample Size
+
+### 16. 
+
+```{r}
+
+sample_size <- function(mu_diff, sds, kappa, alpha, beta){
+  pooled_sd <- sqrt((sds[[1]]^2 + sds[[2]]^2)/2)
+  nB <- (1+1/kappa) * (pooled_sd*(qnorm(1-alpha/2) + qnorm(1-beta))/mu_diff)^2
+  N <- ceiling(nB)*2
+  return(N)
+}
+
+condom_sds <- 
+  main_sample %>% 
+  group_by(any) %>% 
+  summarise(sd = sd(numcond, na.rm = TRUE))
+
+sd1 <- condom_sds[[1, 2]]
+sd2 <- condom_sds[[2, 2]]
+
+sample_size(mu_diff = 1, sd = c(sd1, sd2), kappa = 1, alpha = 0.05, beta = 0.20)
+
+sample_size(mu_diff = 1, sd = c(sd1, sd2), kappa = 1, alpha = 0.05, beta = 0.10)
+
+```
+
+With power level as 0.8 a sample of 114 people will be required, and for power of 0.9 the sample will need to include 152 people.
+
+***
+
+### 17.
+```{r, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+condom_icc <- 
+  main_sample %>% 
+  filter(!is.na(numcond)) %>%
+  ICCbare(site, numcond, data = .)
+
+condom_sd <- sd(main_sample$numcond, na.rm = TRUE)
+
+library(CRTSize)
+n4means(delta = 1, sigma = condom_sd, m = 40, ICC = condom_icc, alpha=0.05, power=0.8, AR=1, two.tailed=FALSE, digits=3)
+```
+
+
+
+

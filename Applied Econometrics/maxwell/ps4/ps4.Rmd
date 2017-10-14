@@ -1,0 +1,169 @@
+---
+title: "AEM: PS4"
+author: "Maxwell Austensen"
+date: "November 16, 2016"
+output: 
+  html_notebook:
+    toc: true
+---
+
+```{r, message=FALSE, warning=FALSE}
+# Install packages if needed
+package_list <- c("tidyverse", "stargazer", "knitr", "haven", "stringr", "MatchIt")
+new_packages <- package_list[! package_list %in% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+
+library(MatchIt)
+library(haven)
+library(tidyverse)
+library(stringr)
+library(broom)
+
+# Modification to stargazer() - escapes "*" to prevent html vs markdown confusion
+stargazer_html <- function(...){
+  capture.output(stargazer::stargazer(..., type = "html", header = FALSE)) %>%
+  stringr::str_replace_all("\\*", "\\\\*") %>% 
+  paste(collapse = "\n") %>%
+  cat("\n")
+}
+```
+
+```{r}
+# Load Data
+all <- 
+  read_stata("http://users.nber.org/~rdehejia/!@$AEM/Problem%20Sets/ps4/nsw_dw.dta") %>% 
+  unite(grp, data_id, treat, remove = FALSE)
+
+dw <- all %>% filter(data_id == "Dehejia-Wahba Sample") %>% select(-data_id)
+psid <- all %>% filter(data_id == "PSID") %>% select(-data_id)
+
+glimpse(all)
+```
+
+## Part I: Direct Matching
+
+### 1.
+```{r}
+format_se <- function(x, digits = 2) {
+  x %>% round(digits = digits) %>% str_c("(", ., ")")
+}
+
+format_mean <- function(x, digits = 2) {
+  x %>% round(digits = digits) %>% as.character()
+}
+
+get_summary <- function(data) {
+  data %>% 
+    summarise_all(funs(mean,  se = sd(.)/sqrt(n()))) %>%
+    mutate_at(vars(contains("_mean")), format_mean) %>% 
+    mutate_at(vars(contains("_se")), format_se)
+}
+
+obs <- 
+  all %>% 
+  group_by(grp) %>% 
+  summarise(observations = n())
+
+all %>% 
+  group_by(grp) %>% 
+  select(-data_id, -treat) %>% 
+  get_summary() %>%
+  gather("name", "value", -grp) %>% 
+  separate(name, c("var", "stat")) %>% 
+  mutate(sample = recode(grp, "Dehejia-Wahba Sample_1" = "Treatment",
+                              "Dehejia-Wahba Sample_0" = "Control",
+                              "PSID_0" = "PSID - 1"),
+         sample = ordered(sample, levels = c("Treatment", "Control", "PSID - 1"))) %>% 
+  spread(var, value) %>% 
+  left_join(obs, by = "grp") %>% 
+  mutate_at(vars(sample, observations), funs(if_else(stat == "se", "", as.character(.)))) %>% 
+  select(` ` = sample, observations, age, education, black, hispanic, `no degree` = nodegree, married, re74, re75) 
+# %>%
+  # knitr::kable()
+```
+
+```{r}
+
+diff_means <- function(p, df){
+  lm(str_interp("${p} ~ group"), data = df) %>% 
+    tidy() %>% 
+    filter(term != "(Intercept)") %>% 
+    transmute(var = p,
+              est = round(estimate, 2),
+              se = round(std.error, 2))
+}
+
+cols <- all %>% select(-grp, -data_id, -treat) %>% names()
+```
+
+```{r}
+samples1 <- 
+  all %>% 
+  filter(grp %in% c("Dehejia-Wahba Sample_1", "PSID_0")) %>% 
+  mutate(group = treat)
+
+map(cols, diff_means, samples1) %>% bind_rows()
+```
+
+```{r}
+samples2 <- 
+  all %>% 
+  filter(grp %in% c("Dehejia-Wahba Sample_0", "PSID_0")) %>% 
+  mutate(group = if_else(grp == "Dehejia-Wahba Sample_0", 1, 0))
+
+map(cols, diff_means, samples2) %>% bind_rows()
+```
+
+
+### 2.
+
+```{r}
+matches <- 
+  all %>% 
+  filter(grp %in% c("Dehejia-Wahba Sample_1", "PSID_0")) %>% 
+  select(treat, re74, re75, re78) %>% 
+  na.omit() %>% 
+  matchit(treat ~ re74 + re75, method = "nearest", data = .) %>% 
+  match.data()
+```
+
+```{r}
+with(matches, t.test(re78 ~ rev(treat))) %>% broom::tidy()
+```
+
+```{r}
+with(dw, t.test(re78 ~ rev(treat))) %>% broom::tidy()
+```
+
+```{r}
+matches %>% 
+  group_by(treat) %>% 
+  summarise(obs = n(),
+            mean = mean(re78),
+            se = sd(re78) / sqrt(obs))
+```
+
+```{r}
+matched_mean <- matches %>% filter(treat == 0) %>% summarise(mean(re74)) %>% .[[1]]
+
+matches %>% 
+  filter(treat == 1) %>% 
+  mutate(matched_mean = matched_mean)
+
+
+matches %>%
+  select(treat, re74) %>% 
+  group_by(treat) %>% 
+  mutate(n = row_number()) %>%
+  spread(treat, re74) %>% 
+  ggplot(aes(`0`, `1`)) +
+  geom_point()
+```
+
+
+
+## Part II: Propensity Score Matching
+
+
+## Part III: Propensity Score Weighting
+

@@ -1,0 +1,77 @@
+---
+title: '7: All Tables'
+author: "Maxwell Austensen"
+date: '`r Sys.Date()`'
+output:
+  html_notebook: default
+  html_document: default
+  github_document: default
+subtitle: AEM Replication
+---
+
+***
+
+```{r, echo=FALSE}
+table1 <- read_feather(str_c(clean_, "table1.feather"))
+table2 <- read_feather(str_c(clean_, "table2.feather"))
+table3 <- read_feather(str_c(clean_, "table3.feather"))
+table4 <- read_feather(str_c(clean_, "table4.feather"))
+table5 <- read_feather(str_c(clean_, "table5.feather"))
+```
+
+```{r, echo=FALSE}
+options(knitr.kable.NA = "")
+```
+
+```{r, echo=FALSE}
+title1 <- "Table 1: Descriptive Statistics"
+
+table1 %>% 
+  mutate(variable = if_else(str_detect(variable, "_sd"), "", variable),
+         variable = str_replace(variable, "_mean", "")) %>%
+  kable(caption = title1, digits = 2, format.args = list(big.mark = ','))
+```
+
+***
+
+```{r, echo=FALSE}
+title2 <- "Table 2: Effect of Firstborn Sex on the Probability of Marital Instability"
+knitr::kable(table2, caption = title2, digits = c(NA, 3, 1, 3, 1, 0), format.args = list(big.mark = ','))
+```
+
+***
+
+```{r, echo=FALSE}
+title3 <- "Table 3: Differences in Means, by Divorce Status and Firstborn Sex (Ever-Married Mothers)"
+
+table3 %>% 
+  mutate(variable = as.character(variable),
+         variable = if_else(str_detect(variable, "_two"), "", variable),
+         variable = str_replace(variable, "_one", "")) %>%
+  kable(caption = title3, digits = 3)
+```
+
+***
+
+```{r, echo=FALSE}
+title4 <- "Table 4: The Effect of Divorce on Female Economic Status and Labor Supply"
+table4 %>% 
+  mutate(variable = if_else(str_detect(variable, "_se"), "", variable),
+         variable = str_replace(variable, "_est", "")) %>% 
+  kable(caption = title4, digits = 3)
+```
+
+***
+
+```{r, echo=FALSE}
+title5 <- "The Effect of Divorce on Female Economic Status and Labor Supply,
+by Firstborn Age"
+
+table5 %>% 
+  mutate(variable = if_else(str_detect(variable, "_se"), "", variable),
+         variable = str_replace(variable, "_est", "")) %>%
+  kable(caption = title5, digits = 3, format.args = list(big.mark = ','))
+```
+
+
+
