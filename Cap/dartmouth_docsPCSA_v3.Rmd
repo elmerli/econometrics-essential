@@ -1,0 +1,266 @@
+---
+title: "Dartmouth_docsPCSA"
+output:
+  html_notebook: default
+  github_document: default
+date: '`r Sys.Date()`'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE}
+library(stringr); library(foreign); library(QuantPsyc); library(psych); library(knitr); library(tidyverse)
+```
+
+### Load zcta2000 -> zcta2010 crosswalk for NYC
+
+```{r}
+# NYC tract2010 -> zcta2010 xwalk
+nyc_zcta_xwalk <- read_csv("../dropbox/capstone/crosswalks/tract2010_zcta2010_xwalk.csv", col_types = "ccd")
+```
+
+### Data downloaded from: https://datawarehouse.hrsa.gov/data/dataDownload/pcsa2010download.aspx
+
+# 2000 Data
+
+
+### Import all files, filter to nyc, clean names, and merge together
+
+```{r}
+# NYC tract2010 -> zcta2010 xwalk
+nyc_zcta_xwalk <- read_csv("../dropbox/capstone/crosswalks/tract2010_zcta2010_xwalk.csv", col_types = "ccd")
+
+import_filter_clean <- function(filename) {
+  drop_vars <- c("state", "county", "tract", "areaname", "stusab", 
+                 "intptlat", "intptlon", "landsqmi", "pcsa", "pcsa_l")
+  
+  read.dbf(str_interp("../dropbox/capstone/data_raw/${filename}.dbf"), as.is = TRUE) %>% 
+    janitor::clean_names() %>% 
+    mutate(tract10 = str_c(county, tract)) %>% 
+    select(-one_of(drop_vars)) %>% 
+    semi_join(nyc_zcta_xwalk, by = "tract10") %>% 
+    as_tibble()
+}
+
+dart10_all <- c("t_103113_1", "t_103113_2", "t_cnm_np_122013") %>% 
+  map(import_filter_clean) %>% 
+  reduce(left_join, by = "tract10")
+
+```
+
+### Create all basic variables
+
+```{r}
+dart10_all2 <- dart10_all %>% 
+  transmute(
+    tract10 = tract10,
+    
+    fem15_44 = tp12i30 + tp12i31 + tp12i32 + tp12i33 + tp12i34 + tp12i36 + tp12i37 + tp12i38,
+    
+    # Nurse-practitioner data
+    cnm_fte = t_cnmfte, 
+    np_fte = t_npfte,
+    
+    # These 2 variables are not available in the tract file (only PCSA)
+    # we need to figure out if there are other variables in the tract file 
+    # that these are included under
+
+    # famprac = tf_doc,
+    # internist = ti_doc,
+    pcphys = tg_doc,
+    specialist = ts_doc,
+    obgyn = to_doc,
+    nonfedpcp = tg_nfeddoc,
+    nonfedspec = ts_nfeddoc,
+    nonfedob = to_nfeddoc,
+    img_pcp = tg_img,
+    img_spec = ts_img,
+    img_ob = to_img,
+    pa_pcp = tpa_pc,
+    pa_spec = tpa_pc_3sp, # GP/IM/Pediatrics PAs - as specialists
+    pa_ob = tpa_pc_ob, # ob pa
+    pa_oth = tpa_pc_oth, # geriatrics or unk specialty PA
+    partb_pcp = tvt_pc10, # pc visits Part b only
+    partb_amb = tvt_am10, # ambulatory visits part b only
+    edvt = tvt_ed10, # est total number of ED visits per day
+    pcpvt_rhc = tvt_rhc10,
+    pcpvt_fqhc = tvt_fqhc10,
+    medicare_acscd = tacs_10, # acs discharges
+    medicare_denom = tbene_n10, # total bene pop for 2010, all medicare, not part-specific
+    pcpdenom = tvden_10, # denom for PCP rate
+    totpop = tage00_14 + tage15_64 + tage65_up, 
+    hospdenom = thden_10
+    # The following variables are not available for the tract (only pcsa)
+    # But I don't see them used anywhere so this is probably fine
+
+    # ppop_pcp = tpop_gdoc,
+    # acs_crudert = tcracs_10, # their calculated CR for ACSDs
+    # ed_crudert = tcr_ed10, # their calculated CR for ed visits
+    # pcp_crudert = tcr_pc10 # their calculted CR for pcp visits
+  ) %>% 
+  mutate_if(is.double, funs(if_else(. %in% c(-99, -999), NA_real_, .))) %>% 
+  replace_na(list(pcpvt_fqhc = 0, pcpvt_rhc = 0)) %>% 
+  mutate(
+    pcpvt = partb_pcp + pcpvt_rhc + pcpvt_fqhc, # total pcp visits for part B and OTP
+    physicians = pcphys + specialist + obgyn, # + famprac + internist,
+    pa = pa_ob + pa_pcp + pa_spec + pa_oth,
+    obstets = obgyn + pa_ob + cnm_fte,
+    allpcp = pcphys + pa_pcp, # + famprac + internist,
+    allpcpnp = pcphys + np_fte + pa_pcp, # + famprac + internist,
+    specs = specialist + pa_spec + pa_oth,
+    allimg = img_ob + img_pcp + img_spec
+  )
+```
+
+### Crosswalk from 2010 tracts to 2010 zctas
+
+```{r}
+dart10_all3 <- dart10_all2 %>% 
+  left_join(nyc_zcta_xwalk, by = "tract10") %>% 
+  mutate_if(is.double, funs(. * afact)) %>% 
+  select(-afact) %>% 
+  group_by(zcta2010) %>% 
+  summarise_if(is.double, sum, na.rm = T) %>% 
+  mutate(year = 2010)
+
+```
+
+
+### Create 2010 zcta-level rates/ratios
+
+```{r}
+dart10_all4 <- dart10_all3 %>% 
+  mutate(
+    # add zcta-level doc ratios
+    physician_rat = totpop / na_if(physicians, 0),
+    pa_rat = totpop / na_if(pa, 0),
+    np_rat = totpop / na_if(np_fte, 0),
+    cnm_rat = fem15_44 / na_if(cnm_fte, 0),
+    allpcp_rat = totpop / na_if(allpcp, 0),
+    allpcpnp_rat = totpop / na_if(allpcpnp, 0),
+    specs_rat = totpop / na_if(specs, 0),
+    obstets_rat = fem15_44 / na_if(obstets, 0),
+    obgyn_rat = fem15_44 / na_if(obgyn, 0),
+    img_rat = totpop / na_if(allimg, 0),
+
+    # add zcta-level visit rates
+    acscd_rt = medicare_acscd / na_if(hospdenom, 0),
+    pcpvt_rt = pcpvt / na_if(pcpdenom, 0),
+    edvt_rt = edvt / na_if(pcpdenom, 0),
+
+    phys_p1000 = (physicians/   na_if(totpop, 0))*1000,
+    pcphys_p1000 = (pcphys / na_if(totpop, 0))*1000,
+    pa_p1000 = (pa / na_if(totpop, 0))*1000,
+    allpcp_p1000 = (allpcp /   na_if(totpop, 0))*1000,
+    allpcpnp_p1000 = (allpcpnp /   na_if(totpop, 0))*1000,
+    specs_p1000 = (specs / na_if(totpop, 0))*1000,
+    obstets_p1000 = (obstets / na_if(totpop, 0))*1000,
+    obgyn_p1000 = (obgyn / na_if(totpop, 0))*1000,
+    img_p1000 = (allimg / na_if(totpop, 0))*1000,
+    np_p1000 = (np_fte / na_if(totpop, 0))*1000
+  )
+
+```
+
+# 1999 Data
+
+### Import all files, filter to nyc, clean names, and merge together
+
+```{r}
+dart99_all <- c("../dropbox/capstone/data_inter/zcta99_zcta2010.csv", 
+            "../dropbox/capstone/data_inter/cms99_zcta2010.csv") %>% 
+  map(~read_csv(.x, col_types = cols(zcta2010 = "c")) %>% 
+        janitor::clean_names()) %>% 
+  reduce(left_join, by = "zcta2010")
+
+# ## bring in 99 data
+# raw99 <- read.csv("../dropbox/capstone/zcta99_zcta2010.csv", as.is = TRUE)
+# names(raw99) <- names(raw99) %>% str_to_lower()
+# 
+# cms_pcsa <-read.csv("../dropbox/capstone/cms99_zcta2010.csv", as.is = T)
+# names(cms_pcsa) <- names(cms_pcsa) %>% str_to_lower()
+```
+
+
+### Create all basic variables and rates/ratios 
+### (already at 2010 zcta-level)
+
+```{r}
+dart99_all2 <- dart99_all %>%
+  transmute(
+    zcta2010 = zcta2010, 
+    year = 1999,
+    pcpvt = zvt_pc99, # part B & outpatient file
+    ambvt = zvt_am99, # part B & outpatient file
+    edvt = zvt_ed99, # total #ED visits per bene per day by Med Part B bene resident in ZCTA
+    pcpdenom = zvden_99, 
+    eddenom = zhden_99, # hospitalization denom- not sure for ED
+    totbene = zbene_n,
+    pcphys = zg_doc,
+    specialist = zs_doc,
+    obgyn = zo_doc,
+    nonfedpcp = zg_nfeddoc,
+    nonfedspec = zs_nfeddoc,
+    nonfedob = zo_nfeddoc,
+    img_pcp = zg_img,
+    img_spec = zs_img,
+    img_ob = zo_img,
+    pa = zpa_tot, # total PAs
+    pa_pcp = zpa_pc,
+    pa_spec = zpa_spec,
+    pa_ob = zpa_obgyn,
+    pa_oth = zpa_oth,
+    fqhcs = zfqhc,
+    fem15_44 = zp012030 + zp012031 + zp012032 + zp012033 + zp012034 + zp012035 + zp012036 + zp012037 + zp012038,
+    totpop = zage00_14 + zage15_64 + zage65_up
+  ) %>% 
+  mutate(
+    physicians = pcphys + specialist + obgyn,
+    obstets = obgyn + pa_ob,
+    allpcp = pcphys + pa_pcp,
+    specs = specialist + pa_spec + pa_oth,
+    allimg = img_ob + img_pcp + img_spec,
+    # PCSA-level doc ratios
+    physician_rat = totpop / na_if(physicians, 0),
+    pa_rat = totpop / na_if(pa, 0),
+    allpcp_rat = totpop / na_if(allpcp, 0),
+    specs_rat = totpop / na_if(specs, 0),
+    obstets_rat = fem15_44 / na_if(obstets, 0),
+    obgyn_rat = fem15_44 / na_if(obgyn, 0),
+    img_rat = totpop / na_if(allimg, 0),
+    # PCSA-level visit rates
+    pcpvt_rt = (pcpvt / na_if(pcpdenom, 0))*100,
+    edvt_rt = (edvt / na_if(eddenom, 0))*1000,
+
+    # new99 does not include internist and famprac, separately, but those are included in total physicians
+    # no np in pcp, no cnm in obstets for new99 
+    phys_p1000 = (physicians / na_if(totpop, 0))*1000,
+    pcphys_p1000 = (pcphys / na_if(totpop, 0))*1000,
+    pa_p1000 = (pa / na_if(totpop, 0))*1000,
+    allpcp_p1000 = (allpcp / na_if(totpop, 0))*1000,
+    specs_p1000 = (specs / na_if(totpop, 0))*1000,
+    obstets_p1000 = (obstets / na_if(totpop, 0))*1000,
+    obgyn_p1000 = (obgyn / na_if(totpop, 0))*1000,
+    img_p1000 = (allimg / na_if(totpop, 0))*1000
+  )
+
+```
+
+# Combine 1999 & 2010 data, add gentrification status, export clean file
+
+```{r}
+gent_status <- read_csv("../dropbox/capstone/data_inter/zcta_gent_xwalk.csv", col_types = "cc") %>% 
+  mutate(gent_status = ordered(gent_status, levels = c("Non-Gentrifying", "Gentrifying", "High Income")))
+
+dart_all_years <- bind_rows(dart99_all2, dart10_all4) %>% 
+  left_join(gent_status, by = "zcta2010") %>% 
+  select(zcta2010, year, gent_status, everything())
+
+write_csv(dart_all_years, "../dropbox/capstone/data_inter/dart_clean.csv")
+
+```
+
+
+

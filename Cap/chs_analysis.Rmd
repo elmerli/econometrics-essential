@@ -1,0 +1,101 @@
+---
+title: "CHS Analysis"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+# devtools::install_github("austensen/austensen")
+library(austensen)
+library(tidyverse)
+library(glue)
+```
+
+```{r}
+chs_all <- feather::read_feather("../dropbox/capstone/data_clean/chs_uhf34_0309_all.feather")
+chs_200pov <- feather::read_feather("../dropbox/capstone/data_clean/chs_uhf34_0309_200pov.feather")
+```
+
+```{r}
+get_models <- function(depvar, df = chs_all, change = FALSE) {
+  if(change == FALSE) {
+    indepvars <- c("gent + nongent", "gent + nongent + insured + age65p + pov + asn + blk + his + forborn")
+    fomulas <- glue("{depvar} ~ {indepvars}")
+  } else if(change == TRUE) {
+    ivar1 <- "gent + nongent"
+    ivar2 <- " + insured_chg + age65p_chg + pov_chg + asn_chg + blk_chg + his_chg + forborn_chg"
+    indepvars <- c(ivar1, collapse(c(ivar1, ivar2)))
+    fomulas <- glue("{depvar} ~ {indepvars}")
+  }
+  
+  map(fomulas, ~ lm(.x, data = df))
+}
+```
+
+---
+
+### `gent` & `nongent`:
+
+Share of the UHF34's residents living in gentrifying and non-gentrifying ZCTAs
+
+---
+
+### `good_health`:
+
+Self-reported general health status: 
+
+1 = "Excellent" or "Very Good"
+
+0 = "Good", "Fair" or "Poor"
+
+---
+
+### `has_pcp`:
+
+> Do you have one person or more than one person you think of as your personal doctor or health care provider?
+
+1 = "Yes"
+
+1 = "No"
+
+---
+
+### `no_care`:
+
+> Was there a time in the past 12 months when you needed medical care, but did not get it?
+
+1 = "Yes"
+
+1 = "No"
+
+---
+
+## Cross-section 2009
+
+```{r, results='asis', warning=FALSE}
+cross_09_models <- c(
+  get_models("good_health"),
+  get_models("has_pcp"),
+  get_models("no_care")
+)
+
+cross_09_se <- map(cross_09_models, robust)
+
+stargazer_mod(cross_09_models, se = cross_09_se, type = "html")
+```
+
+
+## Changes 2003-2009
+
+```{r, results='asis', warning=FALSE}
+chg_09_models <- c(
+  get_models("good_health_chg", change = TRUE),
+  get_models("has_pcp_chg", change = TRUE)
+)
+
+chg_09_se <- map(chg_09_models, robust)
+
+stargazer_mod(chg_09_models, se = chg_09_se, type = "html")
+```
+
+
