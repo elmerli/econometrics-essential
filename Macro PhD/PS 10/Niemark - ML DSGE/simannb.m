@@ -1,8 +1,9 @@
 function [xopt]=simannb(func, x, LB, UB, sa_t, sa_rt, sa_nt, sa_ns,rseed)
 
 % Simulated Annealing programmed for minimization problem
+
 % INPUTS
-% func, string variable containing name of function file to be optimized
+  % func, string variable containing name of function file to be optimized - hence the minimication is over this function
 % x, starting values
 % LB, lower bound on optimization parameters
 % UB, upper bound on optimization parameters

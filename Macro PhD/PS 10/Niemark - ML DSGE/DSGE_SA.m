@@ -48,7 +48,7 @@ sa_ns=5;
 % warning off all;
 
 %% Simulated Annealing
-[xhat]=simannb( 'LLDSGE', x, LB, UB, sa_t, sa_rt, sa_nt, sa_ns, 1);
+[xhat]=simannb( 'LLDSGE', x, LB, UB, sa_t, sa_rt, sa_nt, sa_ns, 1); % the minimization is over the LLDSGE function
 
 %--------------------------------------------------------------------------
 thetalabel=['tau    ';'beta   ';'theta  ';'phi_pi ';'phi_y  ';'varphi ';'alpha  ';'eps    ';'rho_v  ';'rho_a  ';'sigmav ';'sigmaa ';];
