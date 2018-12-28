@@ -10,30 +10,21 @@ alpha     = THETA(7); %production function parameter
 eps       = THETA(8); % elasticity of substitution between goods i and j in the consumption basket
 rho_v     = THETA(9); %persistence parameter
 rho_a     = THETA(10); %persistence parameter
-rho_z     = THETA(11); %persistence parameter
-rho_u     = THETA(12); %persistence parameter
-sigma_v   = THETA(13); %standard deviation
-sigma_a   = THETA(14); %standard deviation
-sigma_z   = THETA(15); %standard deviation
-sigma_u   = THETA(16); %standard deviation
+sigma_v   = THETA(11); %standard deviation
+sigma_a   = THETA(12); %standard deviation of innovation to a_t
 
-[T,R,eu] = NKBC_model(tau,beta,theta,phi_pi,phi_y,varphi,alpha,eps,rho_v,rho_a,rho_z,rho_u,sigma_v,sigma_a,sigma_z,sigma_u);
+[T,R,eu] = NKBC_model(tau,beta,theta,phi_pi,phi_y,varphi,alpha,eps,rho_v,rho_a,sigma_v,sigma_a);
 psi_yna = (1+varphi)/(tau*(1-alpha)+varphi+alpha);
-kappa   = (1/theta-1)*(1-beta*theta)*((1-alpha)/(1-alpha+alpha*eps))*(tau+((varphi+alpha)/(1-alpha)));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Put model in state space form
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 A=T;
-C = R*[sigma_v 0 0 0;
-       0 sigma_a 0 0;
-       0 0 sigma_z 0;
-       0 0 0 sigma_u];
-
-D=[1,0,0,0,0,psi_yna,0,0,(1/kappa),0;%Output
-    0,1,0,0,0,0,0,0,0,0;%Inflation
-    0,0,1,0,0,0,0,0,0,0;%Interest rate
-    1/(1-alpha),0,0,0,0,-(1 - psi_yna),0,0,0,0;];%Hours worked
+C=R*[sigma_v,0;0,sigma_a;];
+D=[1,0,0,0,0,psi_yna,0,0;%Output
+    0,1,0,0,0,0,0,0;%Inflation
+    0,0,1,0,0,0,0,0;%Interest rate
+    1/(1-alpha),0,0,0,0,-(1 - psi_yna),0,0;];%Hours worked
     
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -41,7 +32,7 @@ D=[1,0,0,0,0,psi_yna,0,0,(1/kappa),0;%Output
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 T=length(Z);
 P= dlyap(A,C*C');%Initial uncertainty equal to unconditional variance of state
-Xfilt=zeros(10,T+1); %initial value for the filtered state.
+Xfilt=zeros(8,T+1); %initial value for the filtered state.
 CC=C*C';
 RR=zeros(4,4);
 RR(3:4,3:4)=eye(2)*.001;
