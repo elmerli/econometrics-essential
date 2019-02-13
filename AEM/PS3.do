@@ -13,7 +13,7 @@
 
 clear all
 set more off
-cd "/Users/elmerleezy/Google Drive/Wagner/第三学期/Advan Empirical Method/Problem Sets/PS3"
+cd "/Users/zongyangli/Google Drive/Wagner/Semester 3/Advan Empirical Method/Problem Sets/PS3"
 use "PS 3 - Clark.dta", clear
 
 ******************************************
