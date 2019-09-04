@@ -1,4 +1,4 @@
-function [prob, state_grid] = tauchen(ns, rho, sig_y ,dev)
+function [prob, state_grid] = tauchen(ns, rho, sig_y, sig_eps, dev)
 %markovchain Discretize AR(1) process
 %   [prob, cum_prob, state_grid] = tauchen(ns, rho, sig_y ,dev) returns
 %   prob, transition matrix,

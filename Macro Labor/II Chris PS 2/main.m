@@ -1,24 +1,24 @@
 clear;
 clc;
 
-addpath('~/Dropbox/Library/MATLAB/compecon/compecon2011_64/CEtools/')
+addpath('/Users/zongyangli/Documents/MATLAB/SupportPackages/compecon2011/CEtools')
 
 global beta r ro se gamma yPP ygrid
 % note: using globals is bad practice! use structures instead
 
 
-%declare parameters
+% declare parameters
 
 beta=0.90;
 r=0.92/beta-1; % in bewlly model, this is how r is calculated
 ro=0.70; % the coefficient of AR(1) process
 se=0.1;
 gamma=2;
+k=11;  % nodes for the distribution of income shocks; the numbr of pints want to find out
 
-k=11;                              % nodes for the distribution of income shocks; the numbr of pints want to find out
 % output: transition dynamics, specific pints (of income, asset process)
 % two state space (income, asset), kartesian product
-[e,w]=rouwenhorst(ro,se,k);        % Rouwenhorst method
+[e,w]=rouwenhorst(ro,se,k); % Rouwenhorst method
 yPP=w;
 ygrid=e';
 
@@ -62,6 +62,8 @@ if norm(c-cnew)<1e-7, break, end
 end
 toc
 pause
+
+
 %% Plot 
 sfine=gridmake(nodeunif(n(1)*2,smin(1),smax(1)),ygrid);
 xfine=funeval(c,fspace,sfine);
