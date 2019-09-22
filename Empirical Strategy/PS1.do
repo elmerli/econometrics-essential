@@ -50,16 +50,43 @@
 	* another method: residualization
 
 	* scatter plot	
+		* set scheme uncluttered, permanent
 		* 01 cohort
 		graph twoway (scatter test01 test00 if c1==1 & treat == 0, msymbol(Oh)) (scatter test01 test00 if c1==1 & treat == 1, msymbol(d)), ///
-			legend (label(1 "control group") label(2 treatment group)) ///
-			title("Pre-treatment and after-treatment test score for cohort 1")
+			legend (label(1 "control group") label(2 "treatment group")) ///
+			title("Pre/after-treatment test score") ///
+			subtitle("cohort 1")
 			graph export "test_pre_after_c1.png", replace
 		* 02 cohort
 		graph twoway (scatter test02 test00  if c1==0 & treat == 0, msymbol(Oh)) (scatter test02 test00 if c1==0 & treat == 1, msymbol(d)), ///
-			legend (label(1 control group) label(2 treatment group)) ///
-			title("Pre-treatment and after-treatment test score for cohort 2")
-			graph export test_pre_after_c2.png, replace
+			legend (label(1 "control group") label(2 "treatment group")) ///
+			title("Pre/after-treatment test score") ///
+			subtitle("cohort 2")
+			graph export "test_pre_after_c2.png", replace
+
+
+* 4c) kernel density for 2000 test scores
+	kdensity test00, kernel(epanechnikov) title("Epanechnikov kernel") subtitle("optimal bandwidth")
+	graph export "kernel_epanechnikov_opt.png", replace
+	kdensity test00, kernel(epanechnikov) bwidth(0.05) title("Epanechnikov kernel") subtitle("0.05 bandwidth")
+	graph export "kernel_epanechnikov_005.png", replace
+	kdensity test00, kernel(epanechnikov) bwidth(0.5) title("Epanechnikov kernel") subtitle("0.5 bandwidth")
+	graph export "kernel_epanechnikov_05.png", replace
+	kdensity test00, kernel(gaussian) title("Gaussian kernel")
+	graph export "kernel_gaussian_opt.png", replace
+
+* 4d) kernel density compare treat & control
+    kdensity test00 if (treat == 0), plot(kdensity test00 if (treat == 1)) legend(ring(0) pos(2) label(1 "control") label(2 "treatment")) title("Epanechnikov kernel") subtitle("Treatment v.s. control, 2000")
+	graph export "kernel_epanechnikov_treat_control_00.png", replace
+    kdensity test01 if (treat == 0), plot(kdensity test01 if (treat == 1)) legend(ring(0) pos(2) label(1 "control") label(2 "treatment")) title("Epanechnikov kernel") subtitle("Treatment v.s. control, 2001")
+	graph export "kernel_epanechnikov_treat_control_01.png", replace
+    kdensity test02 if (treat == 0), plot(kdensity test02 if (treat == 1)) legend(ring(0) pos(2) label(1 "control") label(2 "treatment")) title("Epanechnikov kernel") subtitle("Treatment v.s. control, 2002")
+	graph export "kernel_epanechnikov_treat_control_02.png", replace
+	
+
+
+
+
 
 
 
