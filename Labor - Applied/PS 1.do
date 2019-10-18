@@ -151,10 +151,10 @@ Author: Elmer Li
 		save rd, replace
 
 	* make density histogram
-		histogram score if abs(rank) <= 50, density normal normopts(lpattern(longdash)) kdensity kdenopts(lcolor(yellow)) text(0.003 -200 "Normal" 0.006 0 "Kernel") ///
+		histogram score if abs(rank) <= 50, width(2) density normal normopts(lpattern(longdash)) kdensity kdenopts(lcolor(yellow)) ///
 			title("Density of score")
 			graph export "Q2_1-b1.png", replace
-		histogram rank if abs(rank) <= 50, density normal normopts(lpattern(longdash)) kdensity kdenopts(lcolor(yellow)) text(0.0025 -200 "Normal" 0.004 0 "Kernel") ///
+		histogram rank if abs(rank) <= 50, width(2) density normal normopts(lpattern(longdash)) kdensity kdenopts(lcolor(yellow)) ///
 			title("Density of rank")
 			graph export "Q2_1-b2.png", replace
 
@@ -187,10 +187,11 @@ Author: Elmer Li
 			restore
 		}
 
-* Q2.3 RD regression
+* Q2.4 RD regression
 	use rd, clear
 	gen rank_ge0 = rank >= 0
 	* a. base 
+		lpoly grad_any rank if rank >= 0, bw(25) at(rank) degree(1)
 		reg grad_any rank_ge0 rank c.rank_ge0#c.rank if abs(rank) <= 25, robust // robust std error
 			outreg2 using RD.xls, replace ctitle(base robust)  dec(3) pdec(3)		
 		reg grad_any rank_ge0 rank c.rank_ge0#c.rank if abs(rank) <= 25, vce(cluster rank) // cluster std error at rank level	

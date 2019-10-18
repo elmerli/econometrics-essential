@@ -1,0 +1,44 @@
+
+First calibration 
+
+Time to solve and simulate:    0.0611 seconds 
+
+Wage elasticity: 0.9546 
+Wage share: 0.9830 
+
+Standard deviations of u, v, theta, y 
+0.0205  0.0270  0.0455  0.0137 
+
+Autocorrelations of u, v, theta, y 
+0.8282  0.6519  0.7710  0.7710 
+
+Correlation matrix 
+1.0000  -0.8608  -0.9602  -0.9597 
+-0.8608  1.0000  0.9687  0.9677 
+-0.9602  0.9687  1.0000  0.9992 
+-0.9597  0.9677  0.9992  1.0000 
+
+
+------------------------------------
+
+Second calibration 
+
+Time to solve and simulate:    0.0595 seconds 
+
+Wage elasticity: 0.4550 
+Wage share: 0.96804 
+
+Standard deviations of u, v, theta, y 
+0.1041  0.1435  0.2357  0.0137 
+
+Autocorrelations of u, v, theta, y 
+0.8333  0.6469  0.7693  0.7710 
+
+Correlation matrix 
+1.0000  -0.8369  -0.9500  -0.9391 
+-0.8369  1.0000  0.9659  0.9349 
+-0.9500  0.9659  1.0000  0.9765 
+-0.9391  0.9349  0.9765  1.0000 
+
+
+------------------------------------
