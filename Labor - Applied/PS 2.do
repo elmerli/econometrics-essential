@@ -46,7 +46,7 @@ Author: Elmer Li
 		bysort teacher year: gen num_students = _N
 		collapse (mean) math1_zs_resid num_students, by (teacher year)
 
-	* e. compute autocov
+	* e. compute gamma
 		by teacher: gen math1_zs_resid_lag1 = math1_zs_resid[_n + 1]
 		by teacher: gen math1_zs_resid_lag2 = math1_zs_resid[_n + 2]
 		by teacher: gen math1_zs_resid_lag3 = math1_zs_resid[_n + 3]
@@ -65,14 +65,36 @@ Author: Elmer Li
 		reshape wide num_students math1_zs_resid, i(teacher) j(year)
 
 	* g. compute VA using matrix
-		mkmat math1_zs_resid1 math1_zs_resid2 math1_zs_resid3, matrix(A_0)
-		mkmat math1_zs_resid0 math1_zs_resid2 math1_zs_resid3, matrix(A_1)
-		mkmat math1_zs_resid0 math1_zs_resid1 math1_zs_resid3, matrix(A_2)
-		mkmat math1_zs_resid0 math1_zs_resid1 math1_zs_resid2, matrix(A_3)
-		
-		correlate math1_zs_resid1 math1_zs_resid2 math1_zs_resid3, covariance
-			matrix sigma_A0_inv = inv(r(C))
+		* compute A matrix
+			mkmat math1_zs_resid1 math1_zs_resid2 math1_zs_resid3, matrix(A_0)
+			mkmat math1_zs_resid0 math1_zs_resid2 math1_zs_resid3, matrix(A_1)
+			mkmat math1_zs_resid0 math1_zs_resid1 math1_zs_resid3, matrix(A_2)
+			mkmat math1_zs_resid0 math1_zs_resid1 math1_zs_resid2, matrix(A_3)
+		* compute sigma	
+			correlate math1_zs_resid1 math1_zs_resid2 math1_zs_resid3, covariance
+				matrix sigma_inv0 = inv(r(C))
 
+				matrix var_cov = r(C)
+				global cov_math1_00 = var_cov[1,1]
+				global cov_math1_01 = var_cov[2,1]
+				global cov_math1_02 = var_cov[3,1]
+				global cov_math1_03 = var_cov[4,1]
+				global cov_math1_11 = var_cov[2,2]
+				global cov_math1_12 = var_cov[3,2]
+				global cov_math1_13 = var_cov[4,2]
+				global cov_math1_22 = var_cov[3,3]
+				global cov_math1_23 = var_cov[4,3]
+				global cov_math1_33 = var_cov[4,4]
+
+			matrix sigma0 = ($cov_math1_11,$cov_math1_12,$cov_math1_13 \ $cov_math1_12, $cov_math1_22, $cov_math1_23 \ $cov_math1_13, $cov_math1_23, $cov_math1_33)
+			 matrix sigma_inv0 = inv(sigma0)
+			matrix sigma1 = ($cov_math1_00,$cov_math1_02,$cov_math1_03 \ $cov_math1_02, $cov_math1_22, $cov_math1_23 \ $cov_math1_03, $cov_math1_23, $cov_math1_33)
+			 gen sigma_inv1 = inv(sigma1)
+			matrix sigma2 = ($cov_math1_00,$cov_math1_01,$cov_math1_03 \ $cov_math1_01, $cov_math1_11, $cov_math1_13 \ $cov_math1_03, $cov_math1_13, $cov_math1_33)
+			 gen sigma_inv2 = inv(sigma2)
+			matrix sigma3 = ($cov_math1_00,$cov_math1_01,$cov_math1_02 \ $cov_math1_01, $cov_math1_11, $cov_math1_12 \ $cov_math1_02, $cov_math1_12, $cov_math1_22)
+			 gen sigma_inv3 = inv(sigma3)
+		
 
 
 		
