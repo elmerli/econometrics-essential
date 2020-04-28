@@ -9,7 +9,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear all; clc;
-cd '/Users/zongyangli/Google Drive/Cornell PhD/4th Semester/Resource economics/PS/PS 4'
+cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS4'
 
 %% Import data, initial paramters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -52,10 +52,10 @@ cd '/Users/zongyangli/Google Drive/Cornell PhD/4th Semester/Resource economics/P
 
 % for country W
 	for i=1:N_aw
-		for j=1:N_sw
-			for k=1:N_sr
-				sigma_w_nu(i,j,k) = sum(a_w(i)==data(:,1) & s_w(j)==data(:,3) & s_r(k)==data(:,4)); 
-				sigma_w_de(i,j,k) = sum(                    s_w(j)==data(:,3) & s_r(k)==data(:,4)); 
+		for j=1:N_sr
+			for k=1:N_sw
+				sigma_w_nu(i,j,k) = sum(a_w(i)==data(:,2) & s_r(j)==data(:,3) & s_w(k)==data(:,4)); 
+				sigma_w_de(i,j,k) = sum(                    s_r(j)==data(:,3) & s_w(k)==data(:,4)); 
 			end
 		end
 	end 
@@ -81,131 +81,75 @@ cd '/Users/zongyangli/Google Drive/Cornell PhD/4th Semester/Resource economics/P
 	Cst.N_sr = N_sr; Cst.N_sw = N_sw;
 	Cst.T = T;
 	Cst.N_theta = 6; 
-	N_theta = Cst.N_theta
+    N_theta = 6; 
 	% actions and states
 	Cst.a_r = a_r; Cst.a_w = a_w; 
 	Cst.s_r = s_r; Cst.s_w = s_w;
 
 % GMM estimate
+	% set opitions
 	theta0 = rand(6,1); 
-	
+	max = 5000;
+	tol_mmts = 1e-10;
+	tol_paras = 1e-10;
+	max_fun_evals = 5000;
+	options = optimset( 'Display', 'off', ...
+	                    'MaxIter', max, ...
+	                    'TolFun', tol_mmts, ...
+	                    'TolX', tol_paras, ...
+	                    'MaxFunEvals', max_fun_evals); 
 
-%% Form choice probabilities
+	% set objecive & optimize
+	objfun = @(theta) GMM_obj(theta, Cst, data);
+	[theta_hat, obj_val, exit_flag]= fminunc(objfun, theta0, options);
+
+	display(theta_hat)
+	display(obj_val)
+    xlswrite('gmm_bootstrap', theta_hat, 1)        
+
+
+%% GMM - boostrap
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Form phi
-phi_r = zeros(N_theta,N_ar,N_aw,N_sr); 
+N_bootstrap=25;
+T=Cst.T;
+data_raw=data;
+theta_hat_bootstrap=zeros(6, N_bootstrap);
 
-for i=1:N_ar
-	for j=1:N_aw
-		for k=1:N_sr
-			if a_r(i) == 0 
-				phi_r(5,i,j,k) = a_w(j); 
-			else 
-				phi_r(1,i,j,k) = a_r(i); 
-				phi_r(2,i,j,k) = a_r(i)*a_w(j); 
-				phi_r(4,i,j,k) = (2-a_r(i))*s_r(k); 
-			end
-        end
-    end
+% BS procedure
+tic
+for b=1:N_bootstrap
+    % resample the data
+    b_index=ceil(T*rand(1,T));  % random bootstrap index -- random gen T numbers, scale up by T
+    data_bs=data_raw(b_index,:);   % bootstrap data set
+    % estimate parameters using GMM for each sample
+    fprintf('bootstrap # %d \n', b); 
+    objfun = @(theta) GMM_obj(theta, Cst, data_bs);
+    [theta_hat, obj_val, exit_flag]= fminunc(objfun, theta0, options);
+    % store results in a matrix
+    theta_hat_bootstrap(:,b)=theta_hat;
 end
-phi_w = phi_r; % same because symmetric states & actions
+save theta_hat_bootstrap
 
-
-%% Choice probabilities
-sigma_r_phi = zeros(N_ar,N_sr,N_sw);
-sigma_r_phi_nu = zeros(N_ar,N_sr,N_sw);
-sigma_r_phi_de = zeros(N_ar,N_sr,N_sw);
-sigma_w_phi = zeros(N_aw,N_sr,N_sw);
-sigma_w_phi_nu = zeros(N_aw,N_sr,N_sw);
-sigma_w_phi_de = zeros(N_sr,N_sw);
-
-
-for k = 1:N_sw
-    for j =1:N_sr            
-    	for i = 1:N_ar  
-        	sigma_r_phi_nu(i,j,k) = exp(phi_r(:,i,j,k)'*theta0);
-        end
-    	sigma_r_phi_de(:,j,k) = sum(sigma_r_phi_nu(1:3,j,k)); 
-    end
-end
-sigma_r_phi = sigma_r_phi_nu./sigma_r_phi_de; 
-
-for k = 1:N_sw
-    for j =1:N_sr            
-    	for i = 1:N_aw  
-        	sigma_w_phi_nu(i,j,k) = exp(phi_w(:,i,j,k)'*theta0);
-        end
-    	sigma_w_phi_de(:,j,k) = sum(sigma_w_phi_nu(1:3,j,k)); 
-    end
-end
-sigma_w_phi = sigma_w_phi_nu./sigma_w_phi_de; 
-
-
-%% Form moment condition
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	
-%% Stack probabilities by looping through t,i,a_i; 
-sigma_R = zeros(T,N_ar); % game by action matrix for R
-sigma_W = zeros(T,N_aw); % game by action matrix for W
-
-for t= 1:T
-    for i = 1:N_ar
-        a_R_value = a_r(i);
-        s_R_value = data(t,3);
-        j = s_R_value+1;
-        s_W_value = data(t,4);
-        k = s_W_value+1;
-        
-        sigma_R(t,i) = sigma_r_phi(i,j,k);
-    end
-end
-
-for t= 1:T
-    for i = 1:N_aw
-        a_W_value = a_w(i);
-        s_R_value = data(t,3);
-        j = s_R_value+1;
-        s_W_value = data(t,4);
-        k = s_W_value+1;
-        
-        sigma_W(t,i) = sigma_w_phi(i,j,k);
-    end
-end
-
-%% data vector 
-yt_r = zeros(T,N_ar);
-yt_w = zeros(T,N_aw);
-
-for t= 1:T
-    for i = 1:N_ar
-    	yt_r(t,i) = (a_r(i)==data(t,1)); 
-    end
-end
-
-for t= 1:T
-    for i = 1:N_aw
-    	yt_w(t,i) = (a_w(i)==data(t,2)); 
-    end
-end
-
-
-%% moment condition & form objective
-sigma_vec = [sigma_R sigma_W]; 
-yt_vec = [yt_r yt_w]; 
-diff_all = yt_vec - sigma_vec; 
-mom1 = [diff_all(:,2:3) diff_all(:,5:6)]; 
-mom2 = diff_all(:,1).*[data(:,3:4)]; 
-mom3 = diff_all(:,4).*[data(:,3:4)]; 
-diff = [mom1 mom2 mom3]; 
-mean_diff = mean(diff,1); 
-% objective
-w= eye(8);
-obj = mean_diff*w*mean_diff';
-
-
-
-
+% calculate std
+    % Calculate the mean estimate and bootstrap standard error
+    mean(theta_hat_bootstrap,2) 
+    std(theta_hat_bootstrap,0,2)
+    xlswrite('gmm_bootstrap2', [mean(theta_hat_bootstrap,2), std(theta_hat_bootstrap,0,2)], 2 )        
+    
+% plot
+	mu_b=mean(theta_hat_bootstrap,2);
+	for p=1:N_theta
+	    subplot(2, 3, p);
+	    % plot the distribution of the bootstrap estimates for each theta
+	    histogram(theta_hat_bootstrap(p,:), 'BinWidth', 0.1)
+	    xlabel(['theta' num2str(p)])
+	    ylabel('Frequency')
+	    hold on
+	    % plot the mean of the bootstrap estimates of each theta
+	    plot([mu_b(p) mu_b(p)],[0 50],'--r')
+	end
+	print('Bootstrap_gmm','-dpng', '-r600')  
 
 
 

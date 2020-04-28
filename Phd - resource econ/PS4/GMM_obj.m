@@ -1,43 +1,183 @@
-function obj= X_GMM_obj(theta, Cst, data, xx, sr, sw, w) 
-%   AEM 7500  PS #4 sub-program 2
-%   This program/function is the obj funtion of the GMM which is called by 
-%   the estimation function to compute the value of the obj function given
-%   the value of the parameters.
-N_ar= Cst.N_ar;
-N_aw= Cst.N_aw;
-a_r= Cst.a_r;
-a_w= Cst.a_w;
+function obj=GMM_obj(theta,Cst,data)
+%   This program is called by the main script to carry out the GMM
+%   estimation of the parameters. 
+
+
+%% Unpack data & parameters
+N_ar = Cst.N_ar;
+N_aw = Cst.N_aw;
+N_sr = Cst.N_sr;
+N_sw = Cst.N_sw;
 T= Cst.T;
+N_theta = Cst.N_theta; 
 
-% theta(1): beta0
-% theta(2): beta1r
-% theta(3): beta2
-% theta(4): beta3r
-% theta(5): beta1w
-% theta(6): beta3w
-beta=[theta(1) theta(2) theta(3) theta(4) theta(1) theta(5) theta(3) theta(6)]';
-zz= xx*beta;
-tid= kron((1:length(zz)/N_ar)', ones(N_ar,1)); 
-denom= accumarray(tid, exp(zz));
-prob= exp(zz)./denom(tid);
-prob_r= prob(1:T*3);
-prob_w= prob(T*3+1:end);
-
-sigma_r= reshape(prob_r, 3, T);
-sigma_w= reshape(prob_w, 3, T);
-sigma_hat=[sigma_r(1:2,:)' sigma_w(1:2,:)' sigma_r(1:2,:)'.*sr sigma_w(1:2,:)'.*sw];
-
-sr= data(:,3);
-sw= data(:,4);
-y_r = ( ones(N_ar,1)*data(:,1)'==a_r'*ones(1,T) );
-y_w = ( ones(N_aw,1)*data(:,2)'==a_w'*ones(1,T) );
-y = [y_r(1:2,:)' y_w(1:2,:)' y_r(1:2,:)'.*sr y_w(1:2,:)'.*sw];
+a_r = Cst.a_r;
+a_w = Cst.a_w;
+s_r = Cst.s_r;
+s_w = Cst.s_w;
 
 
-%% Part III: Form the moment condition
-m = mean( y - sigma_hat, 1);
-obj = m*w*m';
+%% Estimate non-parametrically ex-ante choice probabilities
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Part IV: Form efficient weighting matrix
-% g= y - sigma_hat;
-% w= inv((g- mean(g))'*(g- mean(g)));
+% initialize sigma arrays
+sigma_r = zeros(N_ar, N_sr, N_sw);
+sigma_w = zeros(N_aw, N_sr, N_sw);
+
+% sigma_r
+for i=1:N_ar
+    for j=1:N_sr
+        for k=1:N_sw
+        sigma_r(i,j,k)= ...
+            sum( a_r(i)==data(:,1) & s_r(j)==data(:,3) & s_w(k)==data(:,4) )... 
+           /sum(                     s_r(j)==data(:,3) & s_w(k)==data(:,4) );
+        end
+    end      
+end
+
+% sigma_w
+for i=1:N_aw
+    for j=1:N_sr
+        for k=1:N_sw
+        sigma_w(i,j,k)= ...
+            sum( a_w(i)==data(:,2) & s_r(j)==data(:,3) & s_w(k)==data(:,4) )...
+           /sum(                    s_r(j)==data(:,3) & s_w(k)==data(:,4));
+        end
+    end      
+end
+
+
+%% Form choice probabilities
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Form phi
+phi_r = zeros(N_theta,N_ar,N_aw,N_sr); 
+phi_w = zeros(N_theta,N_ar,N_aw,N_sw); 
+
+% phi_r
+for i=1:N_ar
+    for j=1:N_aw
+        for k=1:N_sr
+            if a_r(i) == 0 
+                phi_r(5,i,j,k) = a_w(j)*sum(sigma_w(j,k,:)); 
+            else 
+                phi_r(1,i,j,k) = a_r(i)*sum(sigma_w(j,k,:)); 
+                phi_r(2,i,j,k) = a_r(i)*a_w(j)*sum(sigma_w(j,k,:)); 
+                phi_r(4,i,j,k) = (2-a_r(i))*s_r(k)*sum(sigma_w(j,k,:)); 
+            end
+        end
+    end
+end
+
+% phi_w
+for j=1:N_aw
+    for i=1:N_ar
+        for k=1:N_sw
+            if a_w(j) == 0 
+                phi_w(6,i,j,k) = a_r(i)*sum(sigma_r(i,:,k));
+            else 
+                phi_w(1,i,j,k) = a_w(j)*sum(sigma_r(i,:,k));
+                phi_w(3,i,j,k) = a_r(i)*a_w(j)*sum(sigma_r(i,:,k));
+                phi_w(4,i,j,k) = (2-a_w(j))*s_w(k)*sum(sigma_r(i,:,k));
+            end
+        end
+    end
+end
+
+
+%% Choice probabilities
+sigma_r_phi = zeros(N_ar,N_sr,N_sw);
+sigma_r_phi_nu = zeros(N_ar,N_sr,N_sw);
+sigma_r_phi_de = zeros(N_ar,N_sr,N_sw);
+sigma_w_phi = zeros(N_aw,N_sr,N_sw);
+sigma_w_phi_nu = zeros(N_aw,N_sr,N_sw);
+sigma_w_phi_de = zeros(N_sr,N_sw);
+
+
+for k = 1:N_sw
+    for j =1:N_sr            
+        for i = 1:N_ar  
+            sigma_r_phi_nu(i,j,k) = exp(phi_r(:,i,j,k)'*theta);
+        end
+        sigma_r_phi_de(:,j,k) = sum(sigma_r_phi_nu(1:3,j,k)); 
+    end
+end
+sigma_r_phi = sigma_r_phi_nu./sigma_r_phi_de; 
+
+for k = 1:N_sw
+    for j =1:N_sr            
+        for i = 1:N_aw  
+            sigma_w_phi_nu(i,j,k) = exp(phi_w(:,i,j,k)'*theta);
+        end
+        sigma_w_phi_de(:,j,k) = sum(sigma_w_phi_nu(1:3,j,k)); 
+    end
+end
+sigma_w_phi = sigma_w_phi_nu./sigma_w_phi_de; 
+
+
+%% Form moment condition & objective
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+%% Stack probabilities by looping through t,i,a_i; 
+sigma_R = zeros(T,N_ar); % game by action matrix for R
+sigma_W = zeros(T,N_aw); % game by action matrix for W
+
+for t= 1:T
+    for i = 1:N_ar
+        a_R_value = a_r(i);
+        s_R_value = data(t,3);
+        j = s_R_value+1;
+        s_W_value = data(t,4);
+        k = s_W_value+1;
+        
+        sigma_R(t,i) = sigma_r_phi(i,j,k);
+    end
+end
+
+for t= 1:T
+    for i = 1:N_aw
+        a_W_value = a_w(i);
+        s_R_value = data(t,3);
+        j = s_R_value+1;
+        s_W_value = data(t,4);
+        k = s_W_value+1;
+        
+        sigma_W(t,i) = sigma_w_phi(i,j,k);
+    end
+end
+
+%% data vector 
+yt_r = zeros(T,N_ar);
+yt_w = zeros(T,N_aw);
+
+for t= 1:T
+    for i = 1:N_ar
+        yt_r(t,i) = (a_r(i)==data(t,1)); 
+    end
+end
+
+for t= 1:T
+    for i = 1:N_aw
+        yt_w(t,i) = (a_w(i)==data(t,2)); 
+    end
+end
+
+
+%% moment condition & form objective
+sigma_vec = [sigma_R sigma_W]; 
+yt_vec = [yt_r yt_w]; 
+diff_all = yt_vec - sigma_vec; 
+mom1 = [diff_all(:,2:3) diff_all(:,5:6)]; 
+mom2 = diff_all(:,1).*[data(:,3:4)]; 
+mom3 = diff_all(:,4).*[data(:,3:4)]; 
+diff = [mom1 mom2 mom3]; 
+mean_diff = mean(diff,1); 
+% objective
+w= eye(8);
+obj = mean_diff*w*mean_diff';
+
+
+
+
+
+
