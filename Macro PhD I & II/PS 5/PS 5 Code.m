@@ -35,22 +35,22 @@ sigmaE= sqrt(1-lamda^2)*sig_y; % standard deviation of Y
 
 %% Markov (Tauchen)
 
-m= 7; % number of discrete points
-Y(m+2)=inf;
-Y(1)= -inf; % Set the boundary value
-P(m,m)= 0; % Define (P(t,t-1))
-for i=1:m
-    Y(i+1)=(i-((m+1)/2))*sig_y;
-end
-
-state_grid = linspace(-dev*sig_y,dev*sig_y,ns)';    % Set state grid
-
-for i=1:m % Note that in the loop i=1-> Y(i)=-inf, so we need P(1,.)=Y(2)
-    for j=1:m
-        P(i,j)=normcdf(((Y(j+1)+Y(j+2))/2-lamda*Y(i+1)) /sigmaE)-...
-               normcdf(((Y(j+1)+Y(j))/2-lamda*Y(i+1))/sigmaE); 
+    m= 7; % number of discrete points
+    Y(m+2)=inf;
+    Y(1)= -inf; % Set the boundary value
+    P(m,m)= 0; % Define (P(t,t-1))
+    for i=1:m
+        Y(i+1)=(i-((m+1)/2))*sig_y;
     end
-end
+
+    state_grid = linspace(-dev*sig_y,dev*sig_y,ns)';    % Set state grid
+
+    for i=1:m % Note that in the loop i=1-> Y(i)=-inf, so we need P(1,.)=Y(2)
+        for j=1:m
+            P(i,j)=normcdf(((Y(j+1)+Y(j+2))/2-lamda*Y(i+1)) /sigmaE)-...
+                   normcdf(((Y(j+1)+Y(j))/2-lamda*Y(i+1))/sigmaE); 
+        end
+    end
 
 % calculate stat based on simulation   
 
