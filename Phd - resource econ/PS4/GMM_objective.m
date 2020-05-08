@@ -15,6 +15,7 @@ T= Cst.T;
 % theta(4): beta3r
 % theta(5): beta1w
 % theta(6): beta3w
+
 beta=[theta(1) theta(2) theta(3) theta(4) theta(1) theta(5) theta(3) theta(6)]';
 zz= xx*beta;
 tid= kron((1:length(zz)/N_ar)', ones(N_ar,1)); 

@@ -51,21 +51,19 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Form phi
-phi_r = zeros(N_theta,N_ar,N_sr,N_sw); 
-phi_w = zeros(N_theta,N_aw,N_sr,N_sw); 
+phi_r = zeros(N_theta,N_ar,N_aw,N_sr); 
+phi_w = zeros(N_theta,N_ar,N_aw,N_sw); 
 
 % phi_r
 for i=1:N_ar
     for j=1:N_aw
-        for sr=1:N_sr
-            for sw=1:N_sw
-                if a_r(i) == 0 
-                    phi_r(5,i,sr,sw) = phi_r(5,i,sr,sw) - a_w(j)*(sigma_w(j,sr,sw)); % accumulative
-                else 
-                    phi_r(1,i,sr,sw) = -a_r(i); 
-                    phi_r(2,i,sr,sw) = phi_r(2,i,sr,sw) - a_r(i)*a_w(j)*(sigma_w(j,sr,sw)); 
-                    phi_r(4,i,sr,sw) = -(2-a_r(i))*s_r(sr); 
-                end
+        for k=1:N_sr
+            if a_r(i) == 0 
+                phi_r(5,i,j,k) = a_w(j)*sum(sigma_w(j,k,:)); 
+            else 
+                phi_r(1,i,j,k) = a_r(i)*sum(sigma_w(j,k,:)); 
+                phi_r(2,i,j,k) = a_r(i)*a_w(j)*sum(sigma_w(j,k,:)); 
+                phi_r(4,i,j,k) = (2-a_r(i))*s_r(k)*sum(sigma_w(j,k,:)); 
             end
         end
     end
@@ -74,15 +72,13 @@ end
 % phi_w
 for j=1:N_aw
     for i=1:N_ar
-        for sr=1:N_sr
-            for sw=1:N_sw
-                if a_w(j) == 0 
-                    phi_w(6,j,sr,sw) = phi_w(6,j,sr,sw) - a_r(i)*(sigma_r(i,sr,sw));
-                else 
-                    phi_w(1,j,sr,sw) = -a_w(j);
-                    phi_w(3,j,sr,sw) = phi_w(3,j,sr,sw) - a_r(i)*a_w(j)*(sigma_r(i,sr,sw));
-                    phi_w(4,j,sr,sw) = -(2-a_w(j))*s_w(sw);
-                end
+        for k=1:N_sw
+            if a_w(j) == 0 
+                phi_w(6,i,j,k) = a_r(i)*sum(sigma_r(i,:,k));
+            else 
+                phi_w(1,i,j,k) = a_w(j)*sum(sigma_r(i,:,k));
+                phi_w(3,i,j,k) = a_r(i)*a_w(j)*sum(sigma_r(i,:,k));
+                phi_w(4,i,j,k) = (2-a_w(j))*s_w(k)*sum(sigma_r(i,:,k));
             end
         end
     end
@@ -170,16 +166,9 @@ end
 %% moment condition & form objective
 sigma_vec = [sigma_R sigma_W]; 
 yt_vec = [yt_r yt_w]; 
-diff_all = yt_vec - sigma_vec; 
-mom1 = [diff_all(:,2:3) diff_all(:,5:6)]; 
-mom2 = diff_all(:,1).*[data(:,3:4)]; 
-mom3 = diff_all(:,4).*[data(:,3:4)]; 
-diff = [mom1 mom2 mom3]; 
-mean_diff = mean(diff,1); 
 
 % objective
-w= eye(8);
-obj = mean_diff*w*mean_diff';
+f= -sum(log(sigma_vec(:)).*yt_vec(:));
 
 
 
