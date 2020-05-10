@@ -21,6 +21,7 @@ cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential
     N_t = max(data(:,2)) + 1; % num of periods
     N_s = max(data(:,3)) + 1; % num of states
     N_kt = N_k*N_t; 
+    beta = 0.9; 
 
 
 % Form I_kt and abatement matrix
@@ -72,39 +73,69 @@ cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential
 %% Non-parametric estimation for M, g and V_c
 
 % transition matrix 
+	M_num = zeros(N_as,N_as); 
+	M_dem = zeros(N_as,1); 
+	data(N_kt+1,:) = 0; % add last row for ease of looping
 
+	for row = 1: N_as
+		for obs = 1: N_kt
+			if data(obs,6) == 0 || data(obs,7) == 0
+				if data(obs,8) == omega(row,1) && data(obs,3) == omega(row,2) % state in the tuple == state in the data
+					M_dem(row,1) = M_dem(row,1) + 1; 
+					for col = 1:N_as
+						if data(obs+1,8) == omega(col,1) && data(obs+1,3) == omega(col,2)
+							M_num(row,col) = M_num(row,col) + 1; 	
+						end
+					end
+				end 
+			end 
+		end 
+	end 
+	M = M_num./M_dem; 	 
 
 % policy function
-g_num = zeros(N_as,1); 
-g_dem = zeros(N_as,1); 
-data(N_kt+1,:) = 0; % add last row for ease of looping
+	g_num = zeros(N_as,1); 
+	g_dem = zeros(N_as,1); 
 
-for as = 1: N_as
-	for obs = 1: N_kt
-		if data(obs,8) == omega(as,1) && data(obs,3) == omega(as,2 ) & data(obs,6) ==0 % state in the tuple == state in the data
-			g_dem(as,1) = g_dem(as,1) + 1; 
-			if data(obs+1,6) ==1
-				g_num(as,1) = g_num(as,1) + 1; 	
-			end
+	for row = 1: N_as
+		for obs = 1: N_kt
+			if data(obs,8) == omega(row,1) && data(obs,3) == omega(row,2) && data(obs,6) ==0 % state in the tuple == state in the data
+				g_dem(row,1) = g_dem(row,1) + 1; 
+				if data(obs+1,6) ==1
+					g_num(row,1) = g_num(row,1) + 1; 	
+				end
+			end 
+		end 
+		for obs = 1: N_kt
+			if data(obs,8) == omega(row,1) && data(obs,3) == omega(row,2) && data(obs,7) ==0 % state in the tuple == state in the data
+				g_dem(row,1) = g_dem(row,1) + 1; 
+				if data(obs+1,7) ==1
+					g_num(row,1) = g_num(row,1) + 1; 	
+				end
+			end 
 		end 
 	end 
-
-end 
-			 
-
-	
-		for t_i = 2:N_t
-            sum(data(:,6)==omega((s_i-1)*N_a+a_i,1) & data(,3)==omega((s_i-1)*N_a+a_i,2) & I_a) ... 
-			/sum( s_r(j)==data(:,3) & s_w(k)==data(:,4) );
-		end 
-	
-	end 
-end
+	g_emp = g_num./g_dem; 	 
+	data(N_kt+1,:) = [];
 
 
+theta0 = ones(3,1); 
 
+sigma = theta0(1); 
+gamma1 = theta0(2); 
+gamma2 = theta0(3); 
+gamma = [gamma1 gamma2]';
 
+I = eye(4); 
+val_fun = ((sigma*g)\(I-beta*M))'; % notice here is mrdevide
+g_hat = exp(-(beta*val_fun-omega*gamma)/sigma); 
 
+mom1 = (g_hat - g_emp).*g_dem;
+mom2 = (g_hat - g_emp).*omega(:1);
+mom3 = (g_hat - g_emp).*omega(:2);
+
+diff = [mom1 mom2 mom3]; 
+mean_diff = mean(diff,1); 
 
 
 
