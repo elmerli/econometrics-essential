@@ -1,29 +1,14 @@
+function [theta_hat, g_hat_hat, val_fun_hat, obj_val]=estimate_ps5(par,data)
+% program to be used for gmm estimate
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Program Name:   PS5.m
-% Author:         Elmer Li
-% Date Created:   05.04
-% Project:        Resource economics
-% Input:          
-% Output:         
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-clear all; clc;
-cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS5'
-
-%% Set up necessary matrixes
+%% data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[data, varname, ~] = xlsread('AEM7500_PS5_data_spring2020.xlsx');
-
 % constants
-	N_k = max(data(:,1)); % num of neighbors
-    N_t = max(data(:,2)) + 1; % num of periods
+	omega = par.omega; 
+    beta = par.beta; 
+    N_kt = length(data(:,1)); 
     N_s = max(data(:,3)) + 1; % num of states
-    N_kt = N_k*N_t; 
-    beta = 0.9; 
-
-
 % Form I_kt and abatement matrix
 	data(N_kt+1,:) = data(N_kt,:); % add last row for ease of looping
 	for n_kt = 1:N_kt
@@ -45,32 +30,14 @@ cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential
     end
     data(N_kt+1,:) = []; 
 
-	I_a = reshape(data(:,6), [N_t,N_k])'; % first the number of time, then the number of neighbors, then transform
-	I_b = reshape(data(:,7), [N_t,N_k])';
-	a_mat = reshape(data(:,8), [N_t,N_k])';
-
 
 % form state matrix
-	N_a = max(a_mat(:)) + 1; 
-	s = (0:1); 
-	a = (0:1); 
-	k = (1:N_k); 
-	t = (0:N_t-1); 
-	
+	N_a = max(data(:,8)) + 1; 	
 	N_as = N_a*N_s; % number of tuples
-	omega = zeros(N_as,2); 
-	for s_i = 1: N_s
-		for a_i = 1: N_a
-			omega((s_i-1)*N_a+a_i,1) = a(a_i); 
-			omega((s_i-1)*N_a+a_i,2) = s(s_i); 
-		end 
-	end
 
-
-%% Structural estimation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Non-parametric estimation for M, g and V_c
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % transition matrix 
 	M_num = zeros(N_as,N_as); 
@@ -119,30 +86,40 @@ cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential
 	data(N_kt+1,:) = [];
 
 
-theta0 = ones(3,1); 
-
-sigma = theta0(1); 
-gamma1 = theta0(2); 
-gamma2 = theta0(3); 
-gamma = [gamma1 gamma2]';
-
-I = eye(4); 
-val_fun = ((sigma*g)\(I-beta*M))'; % notice here is mrdevide
-g_hat = exp(-(beta*val_fun-omega*gamma)/sigma); 
-
-mom1 = (g_hat - g_emp).*g_dem;
-mom2 = (g_hat - g_emp).*omega(:1);
-mom3 = (g_hat - g_emp).*omega(:2);
-
-diff = [mom1 mom2 mom3]; 
-mean_diff = mean(diff,1); 
+%% Pack parameters
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	par.g_dem = g_dem; 
+	par.g_emp = g_emp; 
+	par.M = M; 
 
 
+%% GMM estimate
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% set opitions
+	theta0 = rand(2,1); 
+	i_max = 5000;
+	tol_mmts = 1e-10;
+	tol_paras = 1e-10;
+	max_fun_evals = 500000;
+	options = optimset( 'Display', 'off', ...
+	                    'MaxIter', i_max, ...
+	                    'TolFun', tol_mmts, ...
+	                    'TolX', tol_paras, ...
+	                    'MaxFunEvals', max_fun_evals); 
 
+	% set objecive & optimize
+	objfun = @(theta) gmm_ps5(theta, par);
+	[theta_hat, obj_val, exit_flag]= fminunc(objfun, theta0, options);
 
+	% value function and policy function
+	sigma_hat = 1; 
+	gamma1_hat = theta_hat(1); 
+	gamma2_hat = theta_hat(2); 
+	gamma_hat = [gamma1_hat gamma2_hat]';
 
-
-
+	I = eye(4); 
+	val_fun_hat = ((I-beta*M)\(sigma_hat*g_emp));
+	g_hat_hat = exp(-(beta*val_fun_hat-omega*gamma_hat)/sigma_hat); 
 
 
 

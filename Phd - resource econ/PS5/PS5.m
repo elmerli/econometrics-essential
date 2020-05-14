@@ -90,6 +90,7 @@ cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential
 		end 
 	end 
 	M = M_num./M_dem; 	 
+    xlswrite('ps5_gmm_M', M, 1) 
 
 % policy function
 	g_num = zeros(N_as,1); 
@@ -115,51 +116,81 @@ cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential
 	end 
 	g_emp = g_num./g_dem; 	 
 	data(N_kt+1,:) = [];
+    xlswrite('ps5_gmm_g_emp', g_emp, 1) 
 
+% clean data
+	% data_cl = data; 
+	% data_cl(:,9) = data_cl(:,4) + data_cl(:,5);
+	% for i = 1:N_k
+	% 	for j = 1:N_t
+	% 		if data_cl((i-1)*N_t + j, 9) == 2 && j>=2
+	% 			 data_cl((i-1)*N_t + j-1, 9) = 2; % revise so that prior year shows when both cities install
+	%        	end
+	% 	end 
+	% end
+	% toDelete = data_cl(:,9)==2; 
+	% data_cl(toDelete,:) = []; 
 
 %% GMM estimation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % pack parameters to structure
-	par.g_emp = g_emp;
-	par.g_dem = g_dem;
-    par.M = M;
 	par.omega = omega;
 	par.beta = beta;
 
 % GMM estimate
-	% set opitions
-	theta0 = rand(3,1); 
-	max = 5000;
-	tol_mmts = 1e-10;
-	tol_paras = 1e-10;
-	max_fun_evals = 5000;
-	options = optimset( 'Display', 'off', ...
-	                    'MaxIter', max, ...
-	                    'TolFun', tol_mmts, ...
-	                    'TolX', tol_paras, ...
-	                    'MaxFunEvals', max_fun_evals); 
-
-	% set objecive & optimize
-	objfun = @(theta) gmm_ps5(theta, par);
-	[theta_hat, obj_val, exit_flag]= fminunc(objfun, theta0, options);
-	display(theta_hat)
-
-	% value function and policy function
-	sigma_hat = theta_hat(1); 
-	gamma1_hat = theta_hat(2); 
-	gamma2_hat = theta_hat(3); 
-	gamma_hat = [gamma1_hat gamma2_hat]';
-
-	I = eye(4); 
-	val_fun_hat = ((sigma_hat*g_emp)\(I-beta*M))';
-	g_hat_hat = exp(-(beta*val_fun_hat-omega*gamma_hat)/sigma_hat); 
-
-    xlswrite('ps5_gmm', theta_hat, 1) 
-    xlswrite('ps5_gmm', val_fun_hat, 2) 
-    xlswrite('ps5_gmm', g_hat_hat, 3) 
+	[theta_hat, g_hat_hat, val_fun_hat, obj_val]=estimate_ps5(par,data);
+    display(theta_hat); 
+    xlswrite('ps5_gmm_theta_hat', theta_hat, 1) 
+    xlswrite('ps5_gmm_val_fun_hat', val_fun_hat, 2) 
+    xlswrite('ps5_gmm_g_hat_hat', g_hat_hat, 3) 
 
 
+
+%% GMM - boostrap
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+N_bootstrap=100;
+theta_hat_bs=zeros(2, N_bootstrap);
+g_hat_hat_bs=zeros(4, N_bootstrap);
+val_fun_hat_bs=zeros(4, N_bootstrap);
+
+% BS procedure
+tic
+for b=1:N_bootstrap
+    % resample the data
+    b_index=ceil(N_k*rand(1,N_k));  % random bootstrap index -- random gen T numbers, scale up by T
+    data_bs = []; 
+    for k = 1:N_k
+        data0 = data(data(:,1)==b_index(k),:);
+        data_bs = [data_bs; data0];   % bootstrap data set
+    end  
+    % estimate parameters using GMM for each sample
+    fprintf('bootstrap # %d \n', b); 
+	[theta_hat_bs(:,b), g_hat_hat_bs(:,b), val_fun_hat_bs(:,b)]=estimate_ps5(par,data_bs);    % store results in a matrix
+end
+save theta_hat_bs
+
+% calculate std
+    % Calculate the mean estimate and bootstrap standard error
+    mean(theta_hat_bs,2) 
+    std(theta_hat_bs,0,2)
+    xlswrite('gmm_bootstrap', [mean(theta_hat_bs,2), std(theta_hat_bs,0,2)], 2 )        
+    
+% plot
+	N_para = 2; 
+	mu_b=mean(theta_hat_bs,2);
+	for p=1:N_para
+	    subplot(2, 1, p);
+	    % plot the distribution of the bootstrap estimates for each theta
+	    histogram(theta_hat_bs(p,:), 'BinWidth', 0.1)
+	    xlabel(['gamma' num2str(p)])
+	    ylabel('Frequency')
+	    hold on
+	    % plot the mean of the bootstrap estimates of each theta
+	    plot([mu_b(p) mu_b(p)],[0 50],'--r')
+	end
+	print('gmm_bootstrap_plot','-dpng', '-r600')  
 
 
 

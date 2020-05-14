@@ -1,0 +1,459 @@
+
+\documentclass{article}
+\usepackage[margin=1cm]{geometry}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TCIDATA{OutputFilter=LATEX.DLL}
+%TCIDATA{Version=5.50.0.2953}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=Manual}
+%TCIDATA{Created=Sunday, April 19, 2020 13:05:55}
+%TCIDATA{LastRevised=Saturday, April 25, 2020 23:25:37}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{<META NAME="DocumentShell" CONTENT="Standard LaTeX\Blank - Standard LaTeX Article">}
+%TCIDATA{CSTFile=40 LaTeX article.cst}
+\usepackage{titlesec} 
+\usepackage{titletoc} 
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{graphicx}
+%\usepackage{ctex}
+\usepackage{tabu}
+\usepackage{wrapfig}
+\usepackage[export]{adjustbox}
+\usepackage{color}
+\usepackage{natbib}
+\usepackage{booktabs}
+\usepackage{wrapfig,lipsum,booktabs}
+\usepackage[colorlinks=true,breaklinks=true,linkcolor=blue,frenchlinks=true]{hyperref}
+\usepackage{tabu}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage{threeparttable}
+\usepackage{rotating}
+\usepackage{pdflscape}
+\usepackage{lipsum}
+\usepackage{mwe}
+\usepackage[space]{grffile}
+\usepackage{subcaption}
+\usepackage{float}
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+%\input{tcilatex}
+\begin{document}
+
+
+\bigskip AEM 7500 Problem Set \#5 Tianli Xia
+
+\textbf{Dynamic Games}
+
+\begin{enumerate}
+\item The payoff function for city i in neighborhood k at time t:%
+\begin{eqnarray*}
+\pi \left( a_{kt},s_{kt},\varepsilon _{ikt};\theta \right) &=&\pi _{0}\left(
+a_{kt},s_{kt};\theta \right) +\varepsilon _{ikt} \\
+&=&\gamma _{1}a_{kt}+\gamma _{2}s_{kt}+\varepsilon _{ikt}
+\end{eqnarray*}
+
+is the profit that the city gets from the decision of investment in time t.
+It consists of two parts,
+
+\begin{enumerate}
+\item a deterministic part which is common to all cities in one neighborhood
+k: the number of cities that have installed the abatement device $a_{kt}$
+and the economy condition $s_{kt}.\gamma _{1}$ and $\gamma _{2}$ show the
+effects of these two states;
+
+\item a stochastic part $\varepsilon _{ikt}$ which is city-specific and not
+observed by the econometrician. The relative magnitude of the shock is
+captured by the variance term $\sigma _{\varepsilon }.$
+\end{enumerate}
+
+\item It is dynamic because firm's decision made today will matter for
+tommorrow's payoff. Since the investment is irreversible, once the firm
+makes the decision it loeses the option value of waiting. It is a game
+because in this setting players invest strategically. A player's payoff
+depends on the other player's move.
+
+\item Each city's value function is given by,%
+\begin{equation*}
+V\left( a_{kt},s_{kt},\varepsilon _{ikt};\theta \right) =\max \left\{ 
+\underset{\text{if }I_{ikt}=1}{\underbrace{\pi \left(
+a_{kt},s_{kt},\varepsilon _{ikt};\theta \right) }},\underset{\text{if }%
+I_{ikt}=0}{\underbrace{\beta V^{c}\left( a_{kt},s_{kt};\theta \right) }}%
+\right\}
+\end{equation*}
+
+where $\pi \left( \cdot \right) $ is given by (1) and 
+\begin{equation*}
+V^{c}\left( a_{kt},s_{kt};\theta \right) =E\left[ V\left(
+a_{kt+1},s_{kt+1},\varepsilon _{ikt+1};\theta \right)
+|a_{kt},s_{kt},I_{ikt}=0\right]
+\end{equation*}
+
+The interpretation is that the value function is the maximum of investing
+this period and the option value of waiting until the next period.
+
+\item The continuation value $V^{c}$ is the expected value of the next
+period conditional on not investing this period. It is the optional value of
+waiting. With the distribution assumptions on $\varepsilon _{ikt}$ we have,%
+\begin{eqnarray*}
+V^{c}\left( a_{kt},s_{kt};\theta \right) &=&E\left[ \beta V^{c}\left(
+a_{kt+1},s_{kt+1},\varepsilon _{ikt+1};\theta \right) +\sigma _{\varepsilon
+}g\left( a_{kt+1},s_{kt+1};\theta \right) |a_{kt},s_{kt},I_{ikt}=0\right] \\
+V_{t}^{c} &=&M_{rc}\left( \beta \vec{V}_{t+1}^{c}+\sigma _{\varepsilon }\vec{%
+g}_{t+1}\right) \\
+M_{rc} &=&\Pr \left( \Omega _{k,t+1}=c|\Omega _{k,t}=r,I_{ikt}=0\right) .
+\end{eqnarray*}
+
+
+\item $g\left( a_{kt},s_{kt};\theta \right) $ is the city's probability of
+investing, i.e. the probability of choosing to install abatement technology
+at t given the state variables $\left( a_{kt},s_{kt}\right) $. Using
+distributional assumption we have $g$ in closed form:
+
+\begin{equation*}
+g\left( a_{kt},s_{kt};\theta \right) =\exp \left( -\frac{\beta V^{c}\left(
+	a_{kt},s_{kt};\theta \right) -\pi _{0}\left( a_{kt},s_{kt};\theta \right) }{%
+	\sigma _{\varepsilon }}\right) .
+\end{equation*}
+
+\end{enumerate}
+
+\bigskip
+
+\textbf{Panel Data}
+
+\begin{enumerate}
+\item $I_{ikt}\equiv 1\left( \text{installed in t+1}\right) -1\left( \text{%
+installed in t}\right) .$ Then I manually set $I_{ikt}=-99$ if $t=T$ (last
+period).
+
+\textbf{Should I drop observations after a firm invests (while waiting for
+the other firm to invest)? }I feel yes.
+
+% Table generated by Excel2LaTeX from sheet 'Sheet1'
+\begin{table}[htbp]
+	\centering
+	\tiny
+	\caption{\textbf{Firm A's investment decision $ I_{A}(k,t) $}}
+	\begin{tabular}{cccccccccccccccccccccc}
+		\toprule
+		& k=1   & k=2   & k=3   & k=4   & k=5   & k=6   & k=7   & k=8   & k=9   & k=10  & k=11  & k=12  & k=13  & k=14  & k=15  & k=16  & k=17  & k=18  & k=19  & k=20  & k=21 \\
+		\midrule
+		T=1   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & 0     & 0 \\
+		T=2   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & 0     & 0 \\
+		T=3   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0     & 0     & 0     & 0     & -99   & 0     & 0 \\
+		T=4   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & 1     & 1     & 0     & 1     & 0     & -99   & 0     & 0 \\
+		T=5   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=6   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=7   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=8   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=9   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=10  & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 1     & 1     & 1     & 0     & 1     & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=11  & 0     & 0     & 1     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & 0     & -99   & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=12  & 0     & 1     & -99   & 0     & 0     & 1     & -99   & -99   & -99   & -99   & 0     & -99   & -99   & -99   & -99   & 0     & -99   & 0     & -99   & 0     & 0 \\
+		T=13  & 1     & -99   & -99   & 1     & 0     & -99   & -99   & -99   & -99   & -99   & 1     & -99   & -99   & -99   & -99   & 0     & -99   & 1     & -99   & 0     & 0 \\
+		T=14  & -99   & -99   & -99   & -99   & 0     & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 0     & -99   & -99   & -99   & 0     & 0 \\
+		T=15  & -99   & -99   & -99   & -99   & 1     & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 0     & -99   & -99   & -99   & 0     & 0 \\
+		T=16  & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99 \\
+		\bottomrule
+	\end{tabular}%
+	\label{tab:addlabel}%
+\end{table}%
+
+\begin{table}[htbp]
+	\centering
+	\tiny
+	\caption{\textbf{Firm B's investment decision $ I_{B}(k,t) $}}
+% Table generated by Excel2LaTeX from sheet 'Sheet2'
+\begin{tabular}{cccccccccccccccccccccc}
+	\toprule
+	& k=1   & k=2   & k=3   & k=4   & k=5   & k=6   & k=7   & k=8   & k=9   & k=10  & k=11  & k=12  & k=13  & k=14  & k=15  & k=16  & k=17  & k=18  & k=19  & k=20  & k=21 \\
+	\midrule
+	T=1   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0 \\
+	T=2   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0 \\
+	T=3   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0 \\
+	T=4   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0 \\
+	T=5   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & 1     & 1     & 1     & 1     & 0     & 1     & 0     & 0 \\
+	T=6   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & -99   & 0     & -99   & 0     & 0 \\
+	T=7   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & -99   & 0     & -99   & 0     & 0 \\
+	T=8   & 0     & 0     & 1     & 1     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & -99   & 0     & -99   & 0     & 0 \\
+	T=9   & 0     & 1     & -99   & -99   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & -99   & 0     & -99   & 0     & 0 \\
+	T=10  & 1     & -99   & -99   & -99   & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 1     & -99   & -99   & -99   & -99   & -99   & 1     & -99   & 0     & 0 \\
+	T=11  & -99   & -99   & -99   & -99   & 0     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 0     & 0 \\
+	T=12  & -99   & -99   & -99   & -99   & 1     & 0     & 0     & 0     & 0     & 0     & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 0     & 0 \\
+	T=13  & -99   & -99   & -99   & -99   & -99   & 0     & 1     & 1     & 1     & 1     & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 0     & 0 \\
+	T=14  & -99   & -99   & -99   & -99   & -99   & 1     & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 0     & 0 \\
+	T=15  & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & 1     & 1 \\
+	T=16  & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99   & -99 \\
+	\bottomrule
+\end{tabular}%
+	\label{tab:addlabel2}%
+\end{table}%
+\item $a_{kt}=I_{Akt}+I_{Bkt},$ then I manually drop observations when $%
+a_{kt}=2.$ Since when both city install the abatement device the game is
+over and they should exit our sample.
+
+\begin{table}[htbp]
+	\centering
+	\tiny
+	\caption{\textbf{State variable a(k,t)}}
+	% Table generated by Excel2LaTeX from sheet 'Sheet2'
+\begin{tabular}{cccccccccccccccccccccc}
+	\toprule
+	& k=1   & k=2   & k=3   & k=4   & k=5   & k=6   & k=7   & k=8   & k=9   & k=10  & k=11  & k=12  & k=13  & k=14  & k=15  & k=16  & k=17  & k=18  & k=19  & k=20  & k=21 \\
+	\midrule
+	T=1   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0 \\
+	T=2   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0 \\
+	T=3   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0 \\
+	T=4   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0     & 0     & 0     & 0     & 1     & 0     & 0 \\
+	T=5   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     &       & 1     & 1     & 0     & 1     & 0     & 1     & 0     & 0 \\
+	T=6   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     &       &       &       & 1     &       & 0     &       & 0     & 0 \\
+	T=7   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     &       &       &       & 1     &       & 0     &       & 0     & 0 \\
+	T=8   & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     &       &       &       & 1     &       & 0     &       & 0     & 0 \\
+	T=9   & 0     & 0     & 1     & 1     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     &       &       &       & 1     &       & 0     &       & 0     & 0 \\
+	T=10  & 0     & 1     & 1     & 1     & 0     & 0     & 0     & 0     & 0     & 0     & 0     & 0     &       &       &       & 1     &       & 0     &       & 0     & 0 \\
+	T=11  & 1     & 1     & 1     & 1     & 0     & 0     & 1     & 1     & 1     & 1     & 1     &       &       &       &       & 1     &       & 1     &       & 0     & 0 \\
+	T=12  & 1     & 1     &       & 1     & 0     & 0     & 1     & 1     & 1     & 1     & 1     &       &       &       &       & 1     &       & 1     &       & 0     & 0 \\
+	T=13  & 1     &       &       & 1     & 1     & 1     & 1     & 1     & 1     & 1     & 1     &       &       &       &       & 1     &       & 1     &       & 0     & 0 \\
+	T=14  &       &       &       &       & 1     & 1     &       &       &       &       &       &       &       &       &       & 1     &       &       &       & 0     & 0 \\
+	T=15  &       &       &       &       & 1     &       &       &       &       &       &       &       &       &       &       & 1     &       &       &       & 0     & 0 \\
+	T=16  &       &       &       &       &       &       &       &       &       &       &       &       &       &       &       & 1     &       &       &       & 1     & 1 \\
+	\bottomrule
+\end{tabular}%
+	\label{tab:addlabel3}%
+\end{table}%
+
+\item $\Omega _{kt}=\left( a_{kt},s_{kt}\right) .$ It takes four possible
+values: $\left\{ 0,1\right\} \times \left\{ 0,1\right\} .$
+
+
+
+\end{enumerate}
+
+\bigskip
+
+\textbf{Structural Econometrics}
+
+\begin{enumerate}
+\item The transition matrix is estimated nonparametrically,%
+\begin{eqnarray*}
+M_{rc} &=&\Pr \left( \Omega _{k,t+1}=c|\Omega _{k,t}=r,I_{ikt}=0\right) \\
+&=&\frac{\Pr \left( \Omega _{k,t+1}=c,\Omega _{k,t}=r,I_{ikt}=0\right) }{\Pr
+\left( \Omega _{k,t}=r,I_{ikt}=0\right) } \\
+&=&\frac{\sum_{i}\#\left( \Omega _{k,t+1}=c,\Omega _{k,t}=r,I_{ikt}=0\right) 
+}{\sum_{i}\#\left( \Omega _{k,t}=r,I_{ikt}=0\right) }.
+\end{eqnarray*}
+
+
+% Table generated by Excel2LaTeX from sheet 'Sheet4'
+\begin{table}[htbp]
+	\centering
+	\caption{\textbf{Transition Probability matrix M}}
+	\begin{tabular}{clcccc}
+		\toprule
+		\multicolumn{2}{c}{(a,s)} & \multicolumn{4}{c}{t+1} \\
+		&       & (0,0) & (0,1) & (1,0) & (1,1) \\
+		\midrule
+		\multirow{4}[2]{*}{t} & (0,0) & 0.857 & 0.113 & 0.026 & 0.004 \\
+		& (0,1) & 0.141 & 0.704 & 0.000 & 0.155 \\
+		& (1,0) & 0.000 & 0.000 & 0.750 & 0.250 \\
+		& (1,1) & 0.000 & 0.000 & 0.130 & 0.870 \\
+		\bottomrule
+	\end{tabular}%
+	\label{tab:addlabel}%
+\end{table}%
+
+
+
+\item Similarly, the empirical investment probability $\bar{g}\left(
+a_{kt},s_{kt}\right) $ is estimated nonparametrically,%
+\begin{eqnarray*}
+\bar{g}\left( a_{kt},s_{kt}\right) &=&\Pr \left( I_{ikt}=1|\Omega
+_{kt}=i\right) =\frac{\Pr \left( I_{ikt}=1,\Omega _{kt}=i\right) }{\Pr
+\left( \Omega _{kt}=i\right) } \\
+&=&\frac{\sum_{i}\#\left( I_{ikt}=1,\Omega _{kt}=i\right) }{\sum_{i}\#\left(
+\Omega _{kt}=i\right) }.
+\end{eqnarray*}
+
+
+
+
+One question: when calculating the demoninator, should we exclude
+observations where one player is not making a decision but the other player
+can still make a decision?
+
+
+% Table generated by Excel2LaTeX from sheet 'Sheet5'
+\begin{table}[htbp]
+	\centering
+	\caption{\textbf{Observed and model predicted choice probabilities on different states:} note since we have only two free poarameters but four choice probabilities to match, we are unable to match all of them perfectly.}
+% Table generated by Excel2LaTeX from sheet 'Sheet5'
+\begin{tabular}{lccc}
+	\toprule
+	& \boldmath{}\textbf{$g_{observed}$}\unboldmath{} & \boldmath{}\textbf{$g_{predicted}$}\unboldmath{} & \boldmath{}\textbf{$V_{c,predicted}$}\unboldmath{} \\
+	\midrule
+	\textbf{a=0,s=0} & 0.036 & 0.241 & 1.615 \\
+	\textbf{a=0,s=1} & 0.134 & 0.151 & 2.242 \\
+	\textbf{a=1,s=0} & 0.273 & 0.303 & 3.128 \\
+	\textbf{a=1,s=1} & 0.324 & 0.311 & 3.264 \\
+	\bottomrule
+\end{tabular}%
+
+	\label{tab:addlabel4}%
+\end{table}%
+
+
+
+\item Estimation: we search for optimal $\theta :$
+
+Step 1: find the fixed point of $V^{c}$ through matrix inversion:%
+\begin{eqnarray*}
+\vec{V}_{4\times 1}^{c} &=&M_{4\times 4}\left( \beta \vec{V}_{c}+\sigma
+_{\varepsilon }\vec{g}_{4\times 1}\right) \\
+\left( I-\beta M\right) \vec{V}_{c} &=&\sigma _{\varepsilon }M\vec{g}%
+_{4\times 1} \\
+\vec{V}_{c} &=&\sigma _{\varepsilon }\left( I-\beta M\right) ^{-1}M\vec{g}%
+_{4\times 1}
+\end{eqnarray*}
+
+then we can construct the model predicted probability conditional on the
+unknown parameter $\theta :$%
+\begin{eqnarray*}
+\hat{g}\left( a_{kt},s_{kt};\theta \right) &=&\exp \left( -\frac{\beta \vec{V%
+}^{c}\left( a_{kt},s_{kt};\theta \right) -\pi _{0}\left(
+a_{kt},s_{kt};\theta \right) }{\sigma _{\varepsilon }}\right) _{4\times 1} \\
+&=&\exp \left( -\frac{\beta \sigma _{\varepsilon }\left( I-\beta M\right)
+^{-1}M\vec{g}_{4\times 1}-\pi _{0}\left( a_{kt},s_{kt};\theta \right) }{%
+\sigma _{\varepsilon }}\right) \\
+&=&\exp \left( -\beta \left( I-\beta M\right) ^{-1}M\vec{g}_{4\times 1}+%
+\frac{\gamma _{1}}{\sigma _{\varepsilon }}a_{kt}+\frac{\gamma _{2}}{\sigma
+_{\varepsilon }}s_{kt}\right)
+\end{eqnarray*}
+
+\textbf{As we can see, we can only identify }$\frac{\gamma _{1}}{\sigma
+_{\varepsilon }}$\textbf{\ and }$\frac{\gamma _{2}}{\sigma _{\varepsilon }}.$%
+\textbf{\ (parameters up to scale), but not able to identify the variance
+term }$\sigma _{\varepsilon }.$\textbf{\ This can also be seen from the fact
+that changing the scale profit function won't change the choice probability.
+So in the following estimation, I only keep two parameters and normalize }$%
+\sigma _{\varepsilon }=1.$
+
+Step 2: then we construct the \texttt{first set} of moment conditions:%
+\begin{eqnarray*}
+m\left( \theta \right)  &=&\left( 
+\begin{array}{c}
+\frac{1}{n}\sum_{\left\vert \Omega _{kt}\right\vert }\left[ \hat{g}\left(
+\Omega _{kt};\theta \right) -\vec{g}\right] n\left( \Omega _{kt}\right)  \\ 
+\frac{1}{n}\sum_{\left\vert \Omega _{kt}\right\vert }\left[ \hat{g}\left(
+\Omega _{kt};\theta \right) -\vec{g}\right] s_{kt}n\left( \Omega
+_{kt}\right)  \\ 
+\frac{1}{n}\sum_{\left\vert \Omega _{kt}\right\vert }\left[ \hat{g}\left(
+\Omega _{kt};\theta \right) -\vec{g}\right] a_{kt}n\left( \Omega
+_{kt}\right) 
+\end{array}%
+\right)  \\
+&=&\frac{1}{n}\sum_{ikt}\left[ \hat{g}_{ikt}\left( \Omega _{kt};\theta
+\right) -\vec{g}_{ikt}\right] 
+\end{eqnarray*}
+
+Or we can also match the \texttt{second set}: 
+\begin{equation*}
+m\left( \theta \right) =\left( 
+\begin{array}{c}
+\left[ \hat{g}\left( \Omega _{kt}=\left( 0,0\right) ;\theta \right) -\vec{g}%
+\left( 0,0\right) \right]  \\ 
+\left[ \hat{g}\left( \Omega _{kt}=\left( 1,0\right) ;\theta \right) -\vec{g}%
+\left( 1,0\right) \right]  \\ 
+\left[ \hat{g}\left( \Omega _{kt}=\left( 0,1\right) ;\theta \right) -\vec{g}%
+\left( 0,1\right) \right]  \\ 
+\left[ \hat{g}\left( \Omega _{kt}=\left( 1,1\right) ;\theta \right) -\vec{g}%
+\left( 1,1\right) \right] 
+\end{array}%
+\right) 
+\end{equation*}
+
+and the objective function becomes,%
+\begin{equation*}
+\min_{\theta }m\left( \theta \right) Wm\left( \theta \right) ^{\prime }
+\end{equation*}
+
+In the MATLAB code I use the \texttt{second sets} of moments, which are
+similar to POB (Rand)'s recommendation, where they call this a pseudo-chi2 estimator. This set of moment actually gives
+more reasonable predictions on $\hat{g}$ than the first set.
+
+\item The bootstrap results are shown as follows, the main difference from the last homework is this time we have to bootstrap at the market level so that the time order is not disrupted.
+
+
+% Table generated by Excel2LaTeX from sheet 'Sheet6'
+\begin{table}[htbp]
+	\centering
+	\caption{\textbf{Results: standard error is obtained from bootstrap.}}
+	\begin{tabular}{lcccc}
+		\toprule
+		& \textbf{Est.} & \textbf{Std.} & \textbf{95\% CI Lower} & \textbf{95\% CI Upper} \\
+		\midrule
+		\textbf{gamma1} & 1.606 & 0.678 & 0.436 & 2.824 \\
+		\textbf{gamma2} & 0.113 & 0.472 & -0.479 & 0.885 \\
+		\textbf{sigma} & 1 (fixed) &       &       &  \\
+		\bottomrule
+	\end{tabular}%
+	\label{tab:addlabel5}%
+\end{table}%
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{Bootstrap_1s_gmm}
+	\caption{\textbf{Bootstrap results}}
+	\label{fig:bootstrap1sgmm}
+\end{figure}
+
+
+\item The point estimate of $\gamma _{1}$ is close to 1 and significant,
+which tells us that the installation of the abatement device is a desirable
+public good and the other player's installation has a positive spillover
+effect on my revenue. The estimate of $\gamma _{2}$ is positive but not
+significant, which means that the exogeneous state does not matter a lot.
+
+\item it helps answer what determines the revenue of firm's decision in
+installing the abatement device, and in particular, how firm's revenue is
+dependent on other firm's choices. It also helps answer the policy question
+why firms delay their investment decisions in pollution abatement device and
+we can do counterfactual analysis to show what policy instrument can achieve
+the social optimal outcome.
+
+\item I would like to add the following two sets of variables:
+
+\begin{enumerate}
+\item a interaction state between $a$ and $s$: it is possible that state and
+installation  
+
+\item more heterogeneous effects: this may require additional observed state
+variables.
+\end{enumerate}
+\end{enumerate}
+
+\end{document}

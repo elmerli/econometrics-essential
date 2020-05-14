@@ -1,21 +1,21 @@
 function obj=gmm_ps5(theta,par)
 % program to be used for gmm estimate
-
-% unpack matrixes and parameters
-	g_emp = par.g_emp;
-	g_dem = par.g_dem;
-    M = par.M; 
-	omega = par.omega; 
+% unpack parameters
+	g_dem = par.g_dem; 
+	g_emp = par.g_emp; 
+	M = par.M; 
     beta = par.beta; 
-	sigma = theta(1); 
-	gamma1 = theta(2); 
-	gamma2 = theta(3); 
+    omega = par.omega; 
+	% sigma = theta(1); 
+	sigma = 1; 
+	gamma1 = theta(1); 
+	gamma2 = theta(2); 
 	gamma = [gamma1 gamma2]';
 
 % calculate value function and g_hat
 	I = eye(4); 
-	val_fun = @(sigma) ((sigma*g_emp)\(I-beta*M))'; % notice here is mrdevide
-	g_hat = exp(-(beta*val_fun(sigma)-omega*gamma)/sigma); 
+	val_fun = @(sigma) ((I-beta*M)\(sigma*M*g_emp)); % notice here is mrdevide
+	g_hat = exp(-(beta*val_fun(sigma)-omega*gamma)./sigma); 
 
 % moment conditions and objective
 	mom1 = (g_hat - g_emp).*g_dem;
@@ -25,7 +25,8 @@ function obj=gmm_ps5(theta,par)
 	diff = [mom1 mom2 mom3]; 
 	diff_mean = mean(diff,1); % mean by column
 	w= eye(3); % 3 moments, equal weighted
-	obj = diff_mean*w*diff_mean';
+	% obj = diff_mean*w*diff_mean';
+	obj = mom1'*eye(4)*mom1;
 
 
 
