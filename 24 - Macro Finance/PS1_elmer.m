@@ -21,19 +21,20 @@ ell   = 0.5;
 % The Steady States
 kappa = 1/((1-ell) * (rho_e-rho_h)/rho_h+1);
 eta_s = kappa * (1-ell);
-q_s   = (2*kappa-kappa.^2)./(eta_s * (rho_e-rho_h)+rho_h);
+q_s   = (2*kappa-kappa.^2)./(eta_s * (rho_e-rho_h)+rho_h); % from GM condition in slides pg 27
 
 %% Solve for the inner loop
 options = optimoptions('fsolve','Display','none');
-% x(1) is kappa, x(2) is q
 
 eta_span = linspace(0.01,0.99,99);
 kappa_span_case1 = ones('like',eta_span); % Original case
 kappa_span_case2 = ones('like',eta_span); % Extension -- steady state capital price in collateral constraint
 
+% x(1) is kappa, x(2) is q
 for i = 1:99
     eta_t = eta_span(i);
-    F_obj = @(x) [(2 * x(1) - x(1).^2)./(eta_t * (rho_e-rho_h)+rho_h)-x(2);1-x(1)*(1-ell * q_s/x(2))./eta_t];
+    F_obj = @(x) [(2 * x(1) - x(1).^2)./(eta_t * (rho_e-rho_h)+rho_h) - x(2);... 
+                  1 - x(1)*(1-ell * q_s/x(2))./eta_t]; % q* constraint slides pg 33
     x0    = [eta_t/(1-ell);20];
     x_sol = fsolve(F_obj,x0,options);
     kappa_span_case2(i) = x_sol(1);
@@ -47,7 +48,7 @@ kappa_span_case2(kappa_span_case2>=1) = 1;
 q_span_case1 = (2*kappa_span_case1-kappa_span_case1.^2)./(eta_span * (rho_e-rho_h)+rho_h);
 q_span_case2 = (2*kappa_span_case2-kappa_span_case2.^2)./(eta_span * (rho_e-rho_h)+rho_h);
 mu_eta_geo_case1 = (1-eta_span).*(-(rho_e-rho_h) + ((1-kappa_span_case1)./q_span_case1).* kappa_span_case1./eta_span);
-mu_eta_geo_case2 = (1-eta_span).*(-(rho_e-rho_h) + ((1-kappa_span_case2)./q_span_case2).* kappa_span_case2./eta_span);
+mu_eta_geo_case2 = ( 1-eta_span).*(-(rho_e-rho_h) + ((1-kappa_span_case2)./q_span_case2).* kappa_span_case2./eta_span);
 
 %% Plot the solution
 f=figure(1);
@@ -68,6 +69,7 @@ ylim([0.0,5.0])
 
 legend('$q_t$-constraint','$q^*$-constraint',Location='northeast')
 legend boxoff
+
 
 subplot(2,2,2);hold on
 box on
