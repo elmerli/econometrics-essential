@@ -1,6 +1,7 @@
 function c = policysolve(fspace, c)
 % Input: number of grids
 % Output: policy coefficient 
+
 global beta r ro se gamma yPP ygrid wbar amin
 % note: using globals is bad practice! use structures instead
 
@@ -18,19 +19,15 @@ cnew=c;                         % Temp value of coefficients
     a=.01*ones(ns,1);
     b=(1+r)*s(:,1)+exp(s(:,2))-amin;  % Greatest level of consumption for each state
     tol=1e-8; %tolerance level
-
     fa=euler(a,c,fspace,s);       % Euler equation at the lower point
     fb=euler(b,c,fspace,s);       % Euler equation at the higher point
-
     x=zeros(ns,1);
 
     % Start bisection
     dx = 0.5*(b - a);
-
     x = a + dx;                       %  start consumption guess at midpoint
     sb=sign(fb);                      %  Sign at Higher point
     dx = sb.*dx;                      %  we increase or decrease x depending if f(b) is positive or negative                     
-
     i=0;
     
     % Inner loop: solve the nonlinear Euler equation for x
@@ -42,6 +39,7 @@ cnew=c;                         % Temp value of coefficients
 
     x(fb>=0)=b(fb>=0);
     c=funfitxy(fspace,s,x);         % Find new coefficients given x
+
 fprintf('%4i %6.2e\n',[it,norm(c-cnew)]);
 if norm(c-cnew)<1e-7, break, end
 end

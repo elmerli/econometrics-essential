@@ -13,7 +13,7 @@
 
 clear all
 set more off
-cd "/Users/zongyangli/Google Drive/Wagner/第三学期/Advan Empirical Method/Problem Sets/PS4"
+cd "/Users/zongyangli/Google Drive/Wagner/Semester 3/Advan Empirical Method/Problem Sets/PS4"
 use "nsw_dw.dta", clear
 
 ** 1
@@ -29,31 +29,32 @@ use nsw_dw, clear
 drop if data_id == "Dehejia-Wahba Sample" 
 outreg2 using sum1.xls, append sum(log) eqkeep(N mean sd)
 
- * test mean differences
-use nsw_dw, clear
-keep if data_id == "Dehejia-Wahba Sample" 
-save exp_var
+*** ttest mean differences ***
+** exp data
+	use nsw_dw, clear
+	keep if data_id == "Dehejia-Wahba Sample" 
+	save exp_var
 
- * need to use ttest to test all the variables.
-use exp_var, clear
-foreach var of varlist age education black hispanic married nodegree re74 re75 re78 {
-di "`var'"
-ttest `var', by(treat)
-}
+	use exp_var, clear
+	foreach var of varlist age education black hispanic married nodegree re74 re75 re78 {
+	di "`var'"
+	ttest `var', by(treat)
+	}
 
-use nsw_dw, clear
-drop if data_id == "Dehejia-Wahba Sample" & treat == 0
-save nonexp_var 
+** exp + PSID
+	use nsw_dw, clear
+	drop if data_id == "Dehejia-Wahba Sample" & treat == 0
+	save nonexp_var 
 
-use nonexp_var, clear
-foreach var of varlist age education black hispanic married nodegree re74 re75 re78 {
-di "`var'"
-ttest `var', by(treat)
-}
+	use nonexp_var, clear
+	foreach var of varlist age education black hispanic married nodegree re74 re75 re78 {
+	di "`var'"
+	ttest `var', by(treat)
+	}
 
 * Other method: used an ID to indicate the exact situation
-** 2
 
+** 2
 use nonexp_var, clear
 nnmatch re78 treat re74 re75 ,pop m(1) keep(mt_74_psid) tc(att) replace
 
@@ -145,11 +146,22 @@ save exp_var, replace
 
 nnmatch re78 treat re74 re75 education black hispanic married re74_2 re75_2, pop m(1) keep(mt_ex_78_all) tc(att) replace
 
+********************************************************************************
+* Propensity score matching
+*****
+
 ** 5
-use nonexp_var, clear
-psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) logit ate neighbor(1)
-pstest age education black hispanic married nodegree re74 re75 re74_2 re75_2, t(treat) mw(_weight) graph
-psgraph
+* diff specifications
+	use nonexp_var, clear
+	psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) logit ate neighbor(1) common ties
+	psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) logit ate common ties
+	psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) logit neighbor(10) common ties ate
+	psmatch2 treat education married black hispanic re74 re75 re74_2 re75_2, out(re78) kernel k(biweight) common ties ate
+* check balance - covariates & pscore
+	pstest age education black hispanic married nodegree re74 re75 re74_2 re75_2, t(treat) mw(_weight) graph
+	psgraph
+	  * default is with replacemnt; commom requires common support in calculate treatment
+	  * neighbor(1) matching is same to 1-1 matching; neighbor(10) matching require min neighbor 10 (too restrictive)
 
 ** 6
 use exp_var, clear

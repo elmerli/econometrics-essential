@@ -9,10 +9,8 @@
 function [zgrid, P] = rouwenhorst(rho,sigma_eps,n)
 
 mu_eps = 0;
-
 q = (rho+1)/2;
-nu = ((n-1)/(1-rho^2))^(1/2) * sigma_eps;
-
+nu = ((n-1)/(1-rho^2))^(1/2) * sigma_eps; % equal to y_N
 P = [q 1-q;1-q q];
 
 

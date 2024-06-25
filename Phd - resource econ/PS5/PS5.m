@@ -9,7 +9,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear all; clc;
-cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS5'
+cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/Replication/The Missing Link- Monetary Policy and The Labor Share/replication_codes_missing_link/empirics'
+
 
 %% Set up necessary matrixes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

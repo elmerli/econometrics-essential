@@ -4,7 +4,6 @@ function [chain] = markovchain(prob, T, start)
 
 chain = ones(T,1);  % Initialize Markov Chain
 chain(1)= start;    % Set starting value
-
 cum_prob = cumsum(prob,2);  % Compute cumulative distribution
 
 % Generate Markov Chain using random numbers uniformly distributed

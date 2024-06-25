@@ -3,8 +3,8 @@ Econ7420 PS 1
 Author: Elmer Li    
 ****************************************************************************/
 	clear all
-	global data /Users/zongyangli/Google Drive/Cornell PhD/3rd Semester/Labor Seminar/PS/PS 1
-	global work /Users/zongyangli/Google Drive/Cornell PhD/3rd Semester/Labor Seminar/PS/PS 1
+	global data /Users/zongyangli/Dropbox/Cornell PhD/3rd Semester/Labor Seminar/PS/PS 1
+	global work /Users/zongyangli/Dropbox/Cornell PhD/3rd Semester/Labor Seminar/PS/PS 1
 
 ********************************************************************************
 * DD

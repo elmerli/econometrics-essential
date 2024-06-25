@@ -95,6 +95,10 @@ title('marginal cost(j)')
 suptitle('Impulse Response for a positive technology shock')
 print -djpeg -r600 q4_1.jpg
 
+
+
+
+
 %% Plot 100 period simulation of the economy
 % 1. Generate randomness technology shock:
 v= sqrt(sigmaa2)*randn(100); % tech shock

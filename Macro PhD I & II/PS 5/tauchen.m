@@ -1,5 +1,5 @@
 function [prob, state_grid] = tauchen(ns, rho, sig_y ,dev)
-%markovchain Discretize AR(1) process
+% markovchain Discretize AR(1) process
 %   [prob, cum_prob, state_grid] = tauchen(ns, rho, sig_y ,dev) returns
 %   prob, transition matrix,
 %   cum_prob, cummulative distribution

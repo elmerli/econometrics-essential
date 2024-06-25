@@ -181,6 +181,8 @@ mean_diff = mean(diff,1);
 w= eye(8);
 obj = mean_diff*w*mean_diff';
 
+% objective - MLE
+f= -sum(log(sigma_vec(:)).*yt_vec(:));
 
 
 

@@ -11,34 +11,35 @@
 % * State variable: k, y
 % * Action varible: k'
 
-clear all
+cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/econometrics-essential/Macro PhD I & II/PS 5'
+clear all; clc;
 %% Initialize the parameters
 
 alpha=0.35; % Capital share of income
 beta=0.95; % discount rate
 delta=0.1; % deprecation rate
 lamda= 0.98; % coefficient of AR(1) process
-k=100; % number of grids
+% k=100; % number of grids
+% len= 0.2; % length of grid
+% start= len;
+% state= start:len:start+len*(k-1); % different states in grids:
+% action= start:len:start+len*(k-1);
 nk = 100;   % size of grid
-len= 0.2; % length of grid
-start= len;
-state= start:len:start+len*(k-1); % different states in grids:
-action= start:len:start+len*(k-1);
 ns = 7;
 dev = 3;
 
 
 phi = 0.98; % AR coefficient
 sig_y = sqrt(.1); % Standard deviation of y_t
-sigmaE= sqrt(1-lamda^2)*sig_y; % standard deviation of Y
+sigmaE= sqrt(1-lamda^2)*sig_y; % standard deviation of epsilon
 
 
 %% Markov (Tauchen)
-
     m= 7; % number of discrete points
     Y(m+2)=inf;
     Y(1)= -inf; % Set the boundary value
     P(m,m)= 0; % Define (P(t,t-1))
+    P = zeros(m,m); 
     for i=1:m
         Y(i+1)=(i-((m+1)/2))*sig_y;
     end
@@ -53,8 +54,7 @@ sigmaE= sqrt(1-lamda^2)*sig_y; % standard deviation of Y
     end
 
 % calculate stat based on simulation   
-
-N = 1000;  % Number of simulation
+N = 500;  % Number of simulation
 sample = ones(N,3); 
 
 for i = 1:N 
@@ -64,7 +64,6 @@ for i = 1:N
 
     sample(i,:) = [mean(chain),std(chain), acf(2)]; % Store values
 end
-
 mean(sample) % Compute average of mean, std, autocorr.
 
 
@@ -73,11 +72,7 @@ k_max = 5;  % Upper bound
 k_min = 1;  % Lower bound
 k_grid = linspace(k_min,k_max,nk)'; % Create grid
 crit = 1;   % Initialize convergence criterion
-tol = 1e-6; % Convergence tolerance
-
-% Grid
-nk = size(k_grid,1);
-ns = size(state_grid,1);
+tol = 1e-3; % Convergence tolerance
 
 % value and policy functions
 val_temp = zeros(nk,ns);  % Initialize temporary value function vector
@@ -89,8 +84,8 @@ pol_fun = zeros(nk,ns); % Initialize policy function vector
 while crit>tol ;
     % Iterate on k
     for j = 1:ns
-    for i=1:nk   
-        c = exp(state_grid(j))* k_grid(i)^alpha + (1-delta)*k_grid(i) - k_grid; % Compute consumption for kt
+    for i = 1:nk   
+        c = exp(state_grid(j))*k_grid(i)^alpha + (1-delta)*k_grid(i) - k_grid; % Compute consumption for kt
         utility_c = log(c); % Compute utility for every ct
         utility_c(c<=0) = -Inf; % Set utility to -Inf for c<=0
         [val_fun(i,j),pol_fun(i,j)] = max(utility_c + beta* val_temp*P(j,:)');   % Solve Bellman equation
@@ -98,13 +93,13 @@ while crit>tol ;
     end
     crit = max(abs(val_fun-val_temp));  % Compute convergence criterion
     val_temp = val_fun; % Update value function
+    display(['error ' num2str(crit)])
 end
 
 
-%% Data
+%% Obtain data
 url = 'https://fred.stlouisfed.org/';
 c = fred(url);
-
 GDP = fetch(c,'GDPC1'); % Fetch GDP from FRED
 CON = fetch(c,'PCECC96');   % Fetch consumption from FRED
 INV = fetch(c,'GPDIC1');    % Fetch investment from FRED
@@ -119,31 +114,28 @@ i_data = log(INV.Data(:,2));    % Log of investment
 
 
 %% Simulation
-T = size(c_data,1)+1;   % Set size of Markov Chain to match data
-
-y_sim = markovchain(P, T, 4);    % Generate Markov chain
+T = size(c_data,1)+1; % Set size of Markov Chain to match data
+y_sim = markovchain(P, T, 4); % Generate Markov chain
 
 k_sim = ones(T,1);  % Initialize capital vector
 k_sim(1) = round(nk/2); % Set starting value to the middle of grid
-
 for t = 2:T
-    k_sim(t)= pol_fun(k_sim(t-1),y_sim(t-1));   % Compute k' from k
+    k_sim(t) = pol_fun(k_sim(t-1),y_sim(t-1)); % Compute k' from k
 end
 
+% Obtain values
 y_sim = state_grid(y_sim); % Map markov chain to state values
 k_sim = k_grid(k_sim);  % Map markov chain to capital values
-
 gdp_sim = exp(y_sim).* k_sim.^alpha;    % Compute GDP
 gdp_sim = gdp_sim(1:end-1); % Drop last value
-
 i_sim= k_sim(2:end) -(1-delta)*k_sim(1:end-1);  % Compute investment
-
 c_sim = gdp_sim - i_sim;    % Compute consumption
 
 c_sim = log(c_sim); % Log of c
 i_sim = log(i_sim); % Log of i
 gdp_sim = log(gdp_sim); % Log of GDP
 
+% Detrend
 c_sim = c_sim-mean(c_sim);  % Detrend c
 i_sim = i_sim- mean(i_sim); % Detrend i
 gdp_sim = gdp_sim - mean(gdp_sim);  % Detrend GDP

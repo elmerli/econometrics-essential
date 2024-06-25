@@ -4,7 +4,7 @@
 
 %% Question 3)
 
-cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS4'
+cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS4'
 
 clc 
 clear all

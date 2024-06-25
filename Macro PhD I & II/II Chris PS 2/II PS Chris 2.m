@@ -3,6 +3,7 @@
 %% Problem 1 Income process
 
 clear, clc;
+cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/econometrics-essential/Macro PhD I & II/II Chris PS 2'
 
 %% Set parameters
 % nk = 500;	% Size of grid
@@ -14,49 +15,47 @@ sig_eps = 0.06; % Standard deviation of e_t
 sig_y = 0.06/(1-rho^2); % Standard deviation of y_t
 
 %% Q1: Markov (Tauchen)
-
 N = 10000;  % Number of simulation
 sample = ones(N,3); % Initialize mean, std, autocorr. placeholder
 
 % Use tauchen to calculate transition matrix and state grid
-[prob, state_grid] = tauchen(ns,rho,sig_y,sig_eps,dev); % Transition matrix
+  [prob, state_grid] = tauchen(ns,rho,sig_y,sig_eps,dev); % Transition matrix
 
 % markov chian interation
-for i = 1:N 
-chain = markovchain(prob, 1000, 4); % Generate Markov chain
-chain = state_grid(chain); % Map markov chain to state values
-acf = autocorr(chain,1); % Compute autocorrelation
-sample(i,:) = [mean(chain),std(chain), acf(2)]; % Store values
-end
+  T = 1000; start = 4; 
+  for i = 1:N 
+    chain = markovchain(prob, 1000, 4); % Generate Markov chain
+    chain = state_grid(chain); % Map markov chain to state values
+    acf = autocorr(chain,1); % Compute autocorrelation
+    sample(i,:) = [mean(chain),std(chain), acf(2)]; % Store values
+  end
 
 % Compute average of mean, std, autocorr.
-mean(sample) 
-
+  mean(sample) 
 
 
 %% Q2: Set number of states = 10, re-run the Markov Chain
 ns = 10; % number of state now changes to 10
 
-
 %% Q3: Rouwenhorst method
-ns = 5; % number of state
-N = 10000;  % numberof simulation
-sample = ones(N,3); % Initialize mean, std, autocorr. placeholder
+  ns = 5; % number of state
+  N = 10000;  % numberof simulation
+  sample = ones(N,3); % Initialize mean, std, autocorr. placeholder
 
 % Use Rouwenhorst method
-[state_grid, prob] = rouwenhorst(rho,sig_eps,ns);
-state_grid = state_grid'; 
+  [state_grid, prob] = rouwenhorst(rho,sig_eps,ns);
+  state_grid = state_grid'; 
 
 % markov chian interation
-for i = 1:N 
-chain = markovchain(prob, 1000, 4); % Generate Markov chain
-chain = state_grid(chain); % Map markov chain to state values
-acf = autocorr(chain,1); % Compute autocorrelation
-sample(i,:) = [mean(chain),std(chain), acf(2)]; % Store values
-end
+  for i = 1:N 
+    chain = markovchain(prob, 1000, 4); % Generate Markov chain
+    chain = state_grid(chain); % Map markov chain to state values
+    acf = autocorr(chain,1); % Compute autocorrelation
+    sample(i,:) = [mean(chain),std(chain), acf(2)]; % Store values
+  end
 
 % Compute average of mean, std, autocorr.
-mean(sample) 
+  mean(sample) 
 
 
 %% Q4:
@@ -80,6 +79,31 @@ end
 mean(sample) 
 
 
+%% 2. rouwenhorst
+  se2= 0.06; 
+  se= sqrt(se2);             % SE of the AR(1) process
+  ro= 0.9;                   % Coefficient of the AR(1) process
+  wbar= -se2/2/(1+ro);       % not sure how to get this
+
+  m=11;
+  [zgrid, P2] = rouwenhorst(ro, se, m);
+  wgrid= zgrid+ wbar/(1-ro);
+
+  K=10000;
+  [V2 ~]=eig(P2');  % Find eigenvectors, solve for PS=S.
+  S2=V2(:,1)';
+  S2=S2/sum(S2); % Solve for the steady state of the transition matrix
+  fprintf("The mean of rouwenhorst method is:\n %f \n", sum(exp(wgrid).*S2));
+  % var(exp(w), (S))
+  fprintf("The se of rouwenhorst method is:\n %f \n", sqrt(var(wgrid, S2)));
+  what(1)= (m+1)/2;
+  for i=1:K-1 
+       what(i+1)= 1+sum(rand(1)>cumsum(P(what(i),:)));
+  end
+  fprintf("The ro of rouwenhorst method is:\n %f \n", corr(exp(wgrid(what(2:end)))',exp(wgrid(what(1:end-1)))'));
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Problem 2 Income fluctuation
 
@@ -87,28 +111,26 @@ clear, clc;
 global beta r ro se gamma yPP ygrid wbar amin
 addpath('/Users/zongyangli/Documents/MATLAB/SupportPackages/compecon2011/CEtools')
 
-
 % Q1 Policy Function
 %declare parameters
-l=25;
-k=9;
-beta=0.95;                         % Discounting
-r=0.02;                            % r(1+\beta)<1   
-gamma=1;                           % Risk aversion
-se2= 0.06; 
-se= sqrt(se2);             % SE of the AR(1) process
-ro= 0.9;                   % Coefficient of the AR(1) process
-wbar= -se2/2/(1+ ro);
-[e,w]=rouwenhorst(ro, se, k);  %  Rouwenhorst method
-yPP=w;                         % Transition matrix we get 
-ygrid=(e'+wbar/(1-ro));        % Nodes of the income process
+  l=25;
+  k=9;                               % number of points in the discrete approximation
+  beta=0.95;                         % Discounting
+  r=0.02;                            % Interest rate r(1+\beta)<1   
+  gamma=1;                           % Risk aversion
+  se2= 0.06; 
+  se= sqrt(se2);             % SE of the AR(1) process
+  ro= 0.9;                   % Coefficient of the AR(1) process
+  wbar= -se2/2/(1+ ro);
+  [e,w]=rouwenhorst(ro,se,k);    % Rouwenhorst method
+  yPP=w;                         % Transition matrix we get 
+  ygrid=(e'+wbar/(1-ro));        % Nodes of the income process
 
 % Bounds for state space: we look for policy functions in the bound
-ymin=min(ygrid);                     % Upper bound of income process
-ymax=max(ygrid);                     % Lower bound of income process
-
-amin = 0;                        % no borrowing
-amax = 10*exp(ymax);             % guess an upper bound on a, check later that do not exceed it
+  ymin=min(ygrid);                     % Upper bound of income process
+  ymax=max(ygrid);                     % Lower bound of income process
+  amin = 0;                        % no borrowing
+  amax = 10*exp(ymax);             % guess an upper bound on a, check later that do not exceed it
 
 % Declare function space to approximate a'(a,y)
 n=[l,k];                        % Number of nodes in a space (25) and y space (k=11)
@@ -116,10 +138,8 @@ n=[l,k];                        % Number of nodes in a space (25) and y space (k
 % Lower and higher bound for the state space (a,y)
 smin=[amin,ymin];                % Lower bound of cartesian product of state space
 smax=[amax,ymax];                % Upper bound of cartesian product of state space
-
 scale=1/2;                       % Call the compecon, can change to 1/3 check for convergence 
-                                 % simply to make the nodes denser close to
-                                 % the kink
+                                 % simply to make the nodes denser close to the kink
 fspace=fundef({'spli',  nodeunif(n(1),(smin(1)-amin+.01).^scale,(smax(1)-amin+.01).^scale).^(1/scale)+amin-.01,0,3},...
               {'spli',ygrid,0,1});   % SPline - "nodeunif": Uniform to more dense grid        
 % fspace is the guess of our policy function: a,y->x           
@@ -209,11 +229,14 @@ print -djpeg -r600 hw_gamma_saving
 se_c(1) = std(c1)
 se_c(2) = std(c2)
 se_c(3) = std(c3)
-
 tab_2b = table(se_c','VariableNames',{'std_c'},'RowNames',{'Gamma = 1';'Gamma = 2';'Gamma = 3'})
 
 
-%% Q2: Simulate a path of income shocks using the transition matrix
+
+%% Q2: Simulate a path of income shocks 
+%% using the transition matrix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Generate several shocks
 K=1000;
 w= zeros(K,1);
@@ -244,7 +267,10 @@ A=[1                1                 1
   corr(ygrid(w),x1) corr(ygrid(w),x2) corr(ygrid(w),x3)];
 xlswrite(str, A, sheet, 'B2' );
 
+
 %% Q3 Vary across se
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % se2=0.01
 gamma=2;
 se2= 0.01; 
@@ -356,6 +382,7 @@ print -djpeg -r600 hw_se_saving
 
 
 %% Q4 Natural debt limit: no borrowing constraint
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 l=25;
 k=9;
@@ -435,6 +462,8 @@ print -djpeg -r600 hw_borrowing_constraint_consumption
 
 
 %% Q5 Compare with no borrowing constraints
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 l=25;
 k=9;

@@ -21,6 +21,8 @@ function obj=gmm_ps5(theta,par)
 	mom1 = (g_hat - g_emp).*g_dem;
 	mom2 = (g_hat - g_emp).*omega(:,1);
 	mom3 = (g_hat - g_emp).*omega(:,2);
+	% the last two moment conditions assume the state var is exogeneous
+	% since there are 4 state tuples, can use each of it that g_hat = g_emp to have 4 moment conditions (check tianli's second set of mmts)
 
 	diff = [mom1 mom2 mom3]; 
 	diff_mean = mean(diff,1); % mean by column

@@ -5,7 +5,7 @@
 %
 clc;
 clear all;
-cd '/Users/zongyangli/Google Drive/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS5/Xia_Tianli_PS5'
+cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/econometrics-essential/Phd - resource econ/PS5/Xia_Tianli_PS5'
 
 %% Part I: Import Data
 [raw, varname, ~] = xlsread('AEM7500_PS5_data_spring2020.xlsx');
