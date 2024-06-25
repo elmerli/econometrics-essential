@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Program Name:   PS3 - Elmer Zongyang Li.m
+% Program Name:   PS1 - Elmer
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -22,6 +22,8 @@ ell   = 0.5;
 kappa = 1/((1-ell) * (rho_e-rho_h)/rho_h+1);
 eta_s = kappa * (1-ell);
 q_s   = (2*kappa-kappa.^2)./(eta_s * (rho_e-rho_h)+rho_h); % from GM condition in slides pg 27
+
+kappa = \frac{\rho^h (1 - \ell) + (\rho^e - \rho^h) \frac{q^* - 1}{\phi}/ {(\rho^e - \rho^h) + \rho^h (1 - \ell)} 
 
 %% Solve for the inner loop
 options = optimoptions('fsolve','Display','none');
