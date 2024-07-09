@@ -7,5 +7,5 @@ function F = PS3_sde_normal(x, eta, a_e, a_h, rho_e, rho_h, phi, sigma, q_last)
     F1 = (1*a_e) + (1-1)*a_h - iota - x(1)*(eta*rho_e + (1-eta)*rho_h);
     F2 = q_prime*(1-eta)*(sigma+x(2)) - x(2)*x(1); 
     F3 = (a_e-a_h) - x(1)*(1-eta)*(sigma+x(2))^2 / (1-eta)*eta;
-    F = [F1; F2; F3]; % output vector F
+    F = [F1; F3]; % output vector F
 end

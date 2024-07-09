@@ -3,9 +3,8 @@
 % Elmer Zongyang Li
 %*************************************************************************
 
-
 clear all; clc; 
-cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/education-automation/Braxton - Technological Change and the Consequences of Job Loss/main_run - simple sand copy/1-occ cost ext alpha'
+cd '/Users/zongyangli/Dropbox/Academic 其他/GitHub/econometrics-essential/24 - Macro Finance'
 
 %% Initialize parameters
 rho_e = 0.06;    % Expert sector discount rate
@@ -111,7 +110,41 @@ ylabel('$\iota$',FontSize=14)
 legend('$\iota$',Location='northeast');
 legend boxoff
 
+exportgraphics(gcf,'PS3_elmer.pdf')
 
-exportgraphics(gcf,'PS1_elmer.pdf')
 
+%% Compute eta's drift & var
+%****************************% 
+
+mu_eta = (1-eta).*( ((kappa-eta).^2).*(1-2*eta)./((eta.^2).*((1-eta).^2)).*((sigma+sigma_q).^2) - (rho_e-rho_h) ); 
+sigma_eta = ((kappa-eta)./eta).*(sigma+sigma_q); 
+
+f2=figure(1);
+figSize = [10 6];
+set(f2, 'PaperUnits', 'inches');
+set(f2, 'Units','inches');
+set(f2, 'PaperSize', figSize);
+set(f2, 'PaperPositionMode', 'auto');
+set(f2, 'Position', [0 0 figSize(1) figSize(2)])
+
+subplot(2,2,1);hold on
+box on
+plot(eta, mu_eta, LineWidth=1);
+xlabel('$\eta$');
+ylabel('$\mu_{\eta}$',FontSize=14)
+% ylim([0.0,5.0])
+legend('$\mu_{\eta}$',Location='northeast');
+legend boxoff
+
+
+subplot(2,2,2);hold on
+box on
+plot(eta, sigma_eta, LineWidth=1);
+xlabel('$\eta$');
+ylabel('$\sigma_{\eta}$',FontSize=14)
+% ylim([0.0,0.1])
+legend('$\sigma_{\eta}$',Location='northeast');
+legend boxoff
+
+exportgraphics(gcf,'PS3_elmer2.pdf')
 

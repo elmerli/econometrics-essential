@@ -39,7 +39,7 @@ x0 = [q_s; iota_s]; % initial guess
 for i = 1:99
     eta_t = eta_span(i);
     kappa_t = kappa_span_case1(i);
-    x_sol = fsolve(@(x) eqm_q_iota(x, rho_e, rho_h, a_e, delta, phi, ell, eta_t, kappa_t), x0, options);
+    x_sol = fsolve(@(x) PS1_q_iota(x, rho_e, rho_h, a_e, delta, phi, ell, eta_t, kappa_t), x0, options);
     q_span_case1(i) = x_sol(1);
     iota_span_case1(i) = x_sol(2);
 end
