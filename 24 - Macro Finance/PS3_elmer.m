@@ -36,16 +36,19 @@ for i = 2:N
     options = optimoptions('fsolve', 'Display', 'off'); % Turn off fsolve display
     [x_sol, fval, exitflag] = fsolve(@(x) PS3_sde(x, eta_val, a_e, a_h, rho_e, rho_h, phi, sigma, q_last), x0, options);
 
-    % Store solutions
-    q(i) = x_sol(1);
+    % Store solutions - only kappa correct
+    % q(i) = x_sol(1);
     kappa(i) = x_sol(2);
-    sigma_q(i) = x_sol(3);
+    % sigma_q(i) = x_sol(3);
+    [x_sol, fval, exitflag] = fsolve(@(x) PS3_sde_normal(x, eta_val, a_e, a_h, rho_e, rho_h, phi, sigma, q_last,kappa(i)), x0, options);
+    q(i) = x_sol(1);
+    sigma_q(i) = x_sol(2);
     iota(i) = (q(i) - 1)/phi;
     chi(i) = kappa(i);
     
     % Stop if kappa >= 1
     if kappa(i) >= 1
-        [x_sol, fval, exitflag] = fsolve(@(x) PS3_sde_normal(x, eta_val, a_e, a_h, rho_e, rho_h, phi, sigma, q_last), x0, options);
+        [x_sol, fval, exitflag] = fsolve(@(x) PS3_sde_normal(x, eta_val, a_e, a_h, rho_e, rho_h, phi, sigma, q_last,1), x0, options);
         q(i) = x_sol(1);
         sigma_q(i) = x_sol(2);
         kappa(i) = 1;
@@ -71,43 +74,43 @@ set(f, 'PaperSize', figSize);
 set(f, 'PaperPositionMode', 'auto');
 set(f, 'Position', [0 0 figSize(1) figSize(2)])
 
-subplot(2,3,1);hold on
+subplot(2,2,1);hold on
 box on
 plot(eta, q, LineWidth=1);
 xlabel('$\eta$');
 ylabel('$q$',FontSize=14)
 % ylim([0.0,5.0])
-legend('$q$',Location='northeast');
+legend('$q$',Location='northwest');
 legend boxoff
 
 
-subplot(2,3,2);hold on
+subplot(2,2,2);hold on
 box on
 plot(eta, sigma_q, LineWidth=1);
 xlabel('$\eta$');
 ylabel('$\sigma_q$',FontSize=14)
 % ylim([0.0,0.1])
-legend('$\sigma_q$',Location='northeast');
+legend('$\sigma_q$',Location='northwest');
 legend boxoff
 
 
-subplot(2,3,3);hold on
+subplot(2,2,3);hold on
 box on
 plot(eta, kappa, LineWidth=1);
 xlabel('$\eta$');
 ylabel('$\kappa$',FontSize=14)
-legend('$\kappa$',Location='northeast');
+legend('$\kappa$',Location='northwest');
 legend boxoff
 
 
-subplot(2,3,4);hold on
+subplot(2,2,4);hold on
 box on
 plot(eta, iota, LineWidth=1);
 xlabel('$\eta$');
 yline(0,LineStyle="--", LineWidth=1,Color='k');
 % ylim([-0.02,0.1])
 ylabel('$\iota$',FontSize=14)
-legend('$\iota$',Location='northeast');
+legend('$\iota$',Location='northwest');
 legend boxoff
 
 exportgraphics(gcf,'PS3_elmer.pdf')
@@ -129,21 +132,21 @@ set(f2, 'Position', [0 0 figSize(1) figSize(2)])
 
 subplot(2,2,1);hold on
 box on
-plot(eta, mu_eta, LineWidth=1);
+plot(eta, eta.*mu_eta, LineWidth=1);
 xlabel('$\eta$');
-ylabel('$\mu_{\eta}$',FontSize=14)
+ylabel('$\eta\mu_{\eta}$',FontSize=14)
 % ylim([0.0,5.0])
-legend('$\mu_{\eta}$',Location='northeast');
+legend('$\eta\mu_{\eta}$',Location='northwest');
 legend boxoff
 
 
 subplot(2,2,2);hold on
 box on
-plot(eta, sigma_eta, LineWidth=1);
+plot(eta, eta.*sigma_eta, LineWidth=1);
 xlabel('$\eta$');
-ylabel('$\sigma_{\eta}$',FontSize=14)
+ylabel('$\eta\sigma_{\eta}$',FontSize=14)
 % ylim([0.0,0.1])
-legend('$\sigma_{\eta}$',Location='northeast');
+legend('$\eta\sigma_{\eta}$',Location='northwest');
 legend boxoff
 
 exportgraphics(gcf,'PS3_elmer2.pdf')
